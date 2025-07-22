@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "PoE Easy Search",
+  "version": "1.0",
+  "description": "Search Path of Exile trade mods by tier instead of values.",
+  "permissions": ["scripting", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.pathofexile.com/trade/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["data/mods.json"],
+      "matches": ["https://www.pathofexile.com/*"]
+    }
+  ]
+}

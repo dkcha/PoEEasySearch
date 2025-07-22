@@ -1,0 +1,1748 @@
+{
+  "Abyss Jewels": {
+    "not_for_sale,abyss_jewel_melee,abyss_jewel,default": {
+      "bases": [
+        {
+          "full_name": "Metadata/Items/Jewels/JewelAbyssMelee",
+          "base_name": "Murderous Eye Jewel",
+          "released": true,
+          "inherits_from": "Metadata/Items/Jewels/AbstractAbyssJewel"
+        }
+      ],
+      "mods": {
+        "corrupted": {
+          "AvoidIgnite": {
+            "V2AvoidIgniteAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "V2AvoidChillAndFreezeAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidShock": {
+            "V2AvoidShockAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidPoison": {
+            "V2AvoidPoisonAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidBleeding": {
+            "V2AvoidBleedAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidStun": {
+            "V2AvoidStunAbyssalJewelCorrupted": 1000
+          },
+          "CorruptedBloodImmunity": {
+            "V2CorruptedBloodImmunityAbyssalJewelCorrupted": 1000
+          },
+          "YouCannotBeHindered": {
+            "V2HinderImmunityAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedAilmentEffectOnEnemies": {
+            "V2IncreasedAilmentEffectOnEnemiesAbyssalJewelCorrupted": 1000
+          },
+          "AreaOfEffect": {
+            "V2IncreasedAreaOfEffectAbyssalJewelCorrupted": 1000
+          },
+          "CriticalStrikeChance": {
+            "V2IncreasedCriticalStrikeChanceAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedDamage": {
+            "V2IncreasedDamageAbyssJewelCorrupted_": 1000
+          },
+          "AvoidMaimChance": {
+            "V2MaimImmunityCorrupted_": 1000
+          },
+          "MinionDamage": {
+            "V2MinionDamageCorrupted__": 1000
+          },
+          "ReservationEfficiencyForJewel": {
+            "V2ReducedManaReservationCorruptedEfficiency_____": 1000
+          },
+          "ImmuneToSilence": {
+            "V2SilenceImmunityJewelCorrupted__": 1000
+          },
+          "FireResistancePenetration": {
+            "V2FirePenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ColdResistancePenetration": {
+            "V2ColdPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "LightningResistancePenetration": {
+            "V2LightningPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ElementalPenetration": {
+            "V2ElementalPenetrationAbyssalJewelCorrupted_": 1000
+          },
+          "ChanceToIgnoreEnemyArmour": {
+            "V2ArmourPenetrationAbyssalJewelCorrupted": 1000
+          }
+        },
+        "prefix": {
+          "AbyssJewelLife": {
+            "AbyssJewelAddedLife1": 3000,
+            "AbyssJewelAddedLife2": 3000,
+            "AbyssJewelAddedLife3": 1000,
+            "AbyssJewelAddedLife4": 500
+          },
+          "AbyssJewelMana": {
+            "AbyssJewelAddedMana1": 1000,
+            "AbyssJewelAddedMana2": 1000,
+            "AbyssJewelAddedMana3": 1000,
+            "AbyssJewelAddedMana4": 500
+          },
+          "DamageOverTimeWhileDualWielding": {
+            "AbyssDamageOverTimeWhileDualWieldingJewel1": 300,
+            "AbyssDamageOverTimeWhileDualWieldingJewel2": 100
+          },
+          "AddedPhysicalDamageWithDaggers": {
+            "AbyssAddedPhysicalDamageWithDaggersJewel1": 2000,
+            "AbyssAddedPhysicalDamageWithDaggersJewel2": 2000,
+            "AbyssAddedPhysicalDamageWithDaggersJewel3_": 2000,
+            "AbyssAddedPhysicalDamageWithDaggersJewel4": 1000,
+            "AbyssAddedPhysicalDamageWithDaggersJewel5_": 500
+          },
+          "AddedLightningDamageWithDaggers": {
+            "AbyssAddedLightningDamageWithDaggersJewel1": 2000,
+            "AbyssAddedLightningDamageWithDaggersJewel2_": 2000,
+            "AbyssAddedLightningDamageWithDaggersJewel3": 2000,
+            "AbyssAddedLightningDamageWithDaggersJewel4": 2000,
+            "AbyssAddedLightningDamageWithDaggersJewel5": 1000,
+            "AbyssAddedLightningDamageWithDaggersJewel6": 500
+          },
+          "AddedFireDamageWithDaggers": {
+            "AbyssAddedFireDamageWithDaggersJewel1": 2000,
+            "AbyssAddedFireDamageWithDaggersJewel2": 2000,
+            "AbyssAddedFireDamageWithDaggersJewel3": 2000,
+            "AbyssAddedFireDamageWithDaggersJewel4": 2000,
+            "AbyssAddedFireDamageWithDaggersJewel5": 1000,
+            "AbyssAddedFireDamageWithDaggersJewel6": 500
+          },
+          "AddedColdDamageWithDaggers": {
+            "AbyssAddedColdDamageWithDaggersJewel1": 2000,
+            "AbyssAddedColdDamageWithDaggersJewel2": 2000,
+            "AbyssAddedColdDamageWithDaggersJewel3": 2000,
+            "AbyssAddedColdDamageWithDaggersJewel4": 2000,
+            "AbyssAddedColdDamageWithDaggersJewel5": 1000,
+            "AbyssAddedColdDamageWithDaggersJewel6": 500
+          },
+          "AddedChaosDamageWithDaggers": {
+            "AbyssAddedChaosDamageWithDaggersJewel1": 1000,
+            "AbyssAddedChaosDamageWithDaggersJewel2_": 1000,
+            "AbyssAddedChaosDamageWithDaggersJewel3__": 1000,
+            "AbyssAddedChaosDamageWithDaggersJewel4": 500,
+            "AbyssAddedChaosDamageWithDaggersJewel5": 250
+          },
+          "FlatEnergyShieldRegeneration": {
+            "AbyssFlatEnergyShieldRegenerationJewel1": 250,
+            "AbyssFlatEnergyShieldRegenerationJewel2": 250,
+            "AbyssFlatEnergyShieldRegenerationJewel3": 250
+          },
+          "LifeRegeneration": {
+            "AbyssFlatLifeRegenerationJewel1": 500,
+            "AbyssFlatLifeRegenerationJewel2": 500,
+            "AbyssFlatLifeRegenerationJewel3_": 500
+          },
+          "AddedManaRegeneration": {
+            "AbyssFlatManaShieldRegenerationJewel1": 350,
+            "AbyssFlatManaShieldRegenerationJewel2": 350,
+            "AbyssFlatManaShieldRegenerationJewel3": 350
+          },
+          "PhysicalDamageReductionRating": {
+            "AbyssFlatArmourJewel1": 600,
+            "AbyssFlatArmourJewel2": 600,
+            "AbyssFlatArmourJewel3": 600,
+            "AbyssFlatArmourJewel4__": 300
+          },
+          "EvasionRating": {
+            "AbyssFlatEvasionJewel1": 600,
+            "AbyssFlatEvasionJewel2": 600,
+            "AbyssFlatEvasionJewel3": 600,
+            "AbyssFlatEvasionJewel4_": 300
+          },
+          "EnergyShield": {
+            "AbyssFlatEnergyShieldJewel1": 600,
+            "AbyssFlatEnergyShieldJewel2": 600,
+            "AbyssFlatEnergyShieldJewel3": 600,
+            "AbyssFlatEnergyShieldJewel4": 300
+          },
+          "GlobalCooldownRecovery": {
+            "AbyssCooldownRecoverySpeed1_": 300,
+            "AbyssCooldownRecoverySpeed2__": 300
+          },
+          "ImpaleEffect": {
+            "AbyssImpaleEffect1_": 300,
+            "AbyssImpaleEffect2_": 300
+          },
+          "PercentDamageGoesToMana": {
+            "AbyssDamageRecoupedAsMana1": 100,
+            "AbyssDamageRecoupedAsMana2": 100
+          }
+        },
+        "suffix": {
+          "AbyssJewelChillEffect": {
+            "AbyssJewelChillEffect1_": 500
+          },
+          "AbyssJewelShockEffect": {
+            "AbyssJewelShockEffect1": 500
+          },
+          "StrengthForJewel": {
+            "AbyssStrengthJewel1_": 500
+          },
+          "DexterityForJewel": {
+            "AbyssDexterityJewel1_": 500
+          },
+          "IntelligenceForJewel": {
+            "AbyssIntelligenceJewel1": 500
+          },
+          "StrengthDexterityForJewel": {
+            "AbyssStrengthDexterityJewel1": 500
+          },
+          "StrengthIntelligenceForJewel": {
+            "AbyssStrengthIntelligenceJewel1_": 500
+          },
+          "DexterityIntelligenceForJewel": {
+            "AbyssDexterityIntelligenceJewel1": 500
+          },
+          "AllAttributesForJewel": {
+            "AbyssAllAttributesJewel1": 250
+          },
+          "FireResistanceForJewel": {
+            "AbyssFireResistanceJewel1": 400
+          },
+          "ColdResistanceForJewel": {
+            "AbyssColdResistanceJewel1": 400
+          },
+          "LightningResistanceForJewel": {
+            "AbyssLightningResistanceJewel1": 400
+          },
+          "FireColdResistanceForJewel": {
+            "AbyssFireColdResistanceJewel1": 250
+          },
+          "FireLightningResistanceForJewel": {
+            "AbyssFireLightningResistanceJewel1": 250
+          },
+          "ColdLightningResistanceForJewel": {
+            "AbyssColdLightningResistanceJewel1": 250
+          },
+          "AllResistancesForJewel": {
+            "AbyssAllResistancesJewel1": 200
+          },
+          "ChaosResistanceForJewel": {
+            "AbyssChaosResistanceJewel1": 100
+          },
+          "IncreasedAttackSpeedForJewel": {
+            "AbyssAttackSpeedJewel1_": 750
+          },
+          "CritChanceForJewel": {
+            "AbyssCriticalStrikeChanceJewel1": 900
+          },
+          "CritMultiplierForJewel": {
+            "AbyssCriticalStrikeMultiplierJewel1": 900
+          },
+          "AddedFireSuffix": {
+            "AbyssAddedFireSuffixJewel1": 1000,
+            "AbyssAddedFireSuffixJewel2": 1000,
+            "AbyssAddedFireSuffixJewel3": 1000,
+            "AbyssAddedFireSuffixJewel4_": 500,
+            "AbyssAddedFireSuffixJewel5": 300
+          },
+          "AddedColdSuffix": {
+            "AbyssAddedColdSuffixJewel1": 1000,
+            "AbyssAddedColdSuffixJewel2_": 1000,
+            "AbyssAddedColdSuffixJewel3": 1000,
+            "AbyssAddedColdSuffixJewel4": 500,
+            "AbyssAddedColdSuffixJewel5_": 300
+          },
+          "AddedLightningSuffix": {
+            "AbyssAddedLightningSuffixJewel1": 1000,
+            "AbyssAddedLightningSuffixJewel2": 1000,
+            "AbyssAddedLightningSuffixJewel3": 1000,
+            "AbyssAddedLightningSuffixJewel4": 500,
+            "AbyssAddedLightningSuffixJewel5": 300
+          },
+          "AddedPhysicalSuffix": {
+            "AbyssAddedPhysicalSuffixJewel1": 1000,
+            "AbyssAddedPhysicalSuffixJewel2": 1000,
+            "AbyssAddedPhysicalSuffixJewel3": 500
+          },
+          "AddedChaosSuffix": {
+            "AbyssAddedChaosSuffixJewel1": 750,
+            "AbyssAddedChaosSuffixJewel2": 750,
+            "AbyssAddedChaosSuffixJewel3": 375
+          },
+          "AttacksBlindOnHitChance": {
+            "AbyssAttacksBlindOnHitChanceJewel1": 800,
+            "AbyssAttacksBlindOnHitChanceJewel2___": 400
+          },
+          "AttacksTauntOnHitChance": {
+            "AbyssAttacksTauntOnHitChanceJewel1": 800,
+            "AbyssAttacksTauntOnHitChanceJewel2": 400
+          },
+          "DamageVSAbyssMonsters": {
+            "AbyssDamageVSAbyssMonstersJewel1": 500
+          },
+          "ReducedPhysicalDamageTakenVsAbyssMonsters": {
+            "AbyssReducedPhysicalDamageTakenVsAbyssMonsterJewel1": 500
+          },
+          "AvoidIgnite": {
+            "AbyssAvoidIgniteJewel1_": 300,
+            "AbyssAvoidIgniteJewel2": 150
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "AbyssAvoidFreezeAndChillJewel1": 300,
+            "AbyssAvoidFreezeAndChillJewel2": 150
+          },
+          "AvoidShockForJewel": {
+            "AbyssAvoidShockJewel1": 300,
+            "AbyssAvoidShockJewel2": 150
+          },
+          "ChanceToAvoidPoison": {
+            "AbyssAvoidPoisonJewel1__": 300,
+            "AbyssAvoidPoisonJewel2__": 150
+          },
+          "ChanceToAvoidBleeding": {
+            "AbyssAvoidBleedingJewel1": 300,
+            "AbyssAvoidBleedingJewel2": 150
+          },
+          "AvoidStun": {
+            "AbyssAvoidStunJewel1": 300,
+            "AbyssAvoidStunJewel2": 150
+          },
+          "IncreasedAccuracy": {
+            "AbyssAccuracyRatingJewel2": 500,
+            "AbyssAccuracyRatingJewel3": 500,
+            "AbyssAccuracyRatingJewel4": 500,
+            "AbyssAccuracyRatingJewel5": 250
+          },
+          "SpellBlockChanceIfHitRecently": {
+            "AbyssSpellBlockChanceIfHitRecentlyJewel1": 250,
+            "AbyssSpellDodgeAndDodgeChanceIfHitRecentlyJewel1": 250
+          },
+          "ReducedPhysicalDamageTakenIfNotHitRecently": {
+            "AbyssReducedPhysicalDamageTakenIfNotHitRecentlyJewel1": 500
+          },
+          "MovementSpeedIfNotDamagedRecently": {
+            "AbyssMovementSpeedIfNotDamagedRecentlyJewel1": 250
+          },
+          "DamageIfEnemySlainRecently": {
+            "AbyssDamageIfEnemySlainRecentlyJewel1": 500
+          },
+          "CriticalStrikeMultiplierIfEnemySlainRecently": {
+            "AbyssCriticalStrikeMultiplierIfEnemySlainRecentlyJewel1": 250
+          },
+          "IncreasedArmourIfNoEnemySlainRecently": {
+            "AbyssIncreasedArmourIfNoEnemySlainRecentlyJewel1__": 500
+          },
+          "DamagePenetratesElementalResistancesIfNoEnemySlainRecently": {
+            "AbyssDamagePenetratesElementalResistancesIfNoEnemySlainRecentlyJewel1": 250
+          },
+          "EvasionRatingWhileMoving": {
+            "AbyssEvasionRatingWhileMovingJewel1": 250
+          },
+          "ManaRegenerationRateWhileMoving": {
+            "AbyssManaRegenerationRateWhileMovingJewel1": 250
+          },
+          "LifeRegenerationRateWhileMoving": {
+            "AbyssLifeRegenerationRateWhileMovingJewel1": 500
+          },
+          "PhysicalDamageAddedAsExtraFireIfCriticalStrikeDealtRecently": {
+            "AbyssPhysicalDamageAddedAsExtraFireIfCriticalStrikeDealtRecentlyJewel1": 300
+          },
+          "AttackSpeedIfCriticalStrikeDealtRecently": {
+            "AbyssAttackSpeedIfCriticalStrikeDealtRecentlyJewel1": 500
+          },
+          "CastSpeedIfCriticalStrikeDealtRecently": {
+            "AbyssCastSpeedIfCriticalStrikeDealtRecentlyJewel1": 250
+          },
+          "CriticalStrikeChanceIfNoCriticalStrikeDealtRecently": {
+            "AbyssCriticalStrikeChanceIfNoCriticalStrikeDealtRecentlyJewel1": 250
+          },
+          "MovementSpeedIfEnemySlainRecently": {
+            "AbyssMovementSpeedIfEnemySlainRecentlyJewel1": 250
+          },
+          "ChanceToBlockIfDamagedRecently": {
+            "AbyssChanceToBlockIfDamagedRecentlyJewel1_": 500
+          },
+          "ChanceToGainUnholyMightOnKillAbyss": {
+            "AbyssChanceToGainUnholyMightOnKillAbyssJewel1": 1000,
+            "AbyssChanceToGainUnholyMightOnKillAbyssJewel2_": 500
+          },
+          "EnchantmentConsecratedGround": {
+            "AbyssSelfCurseEffectOnConsecratedGroundJewel1__": 100
+          },
+          "EnchantmentElusive": {
+            "AbyssAvoidElementalAilmentsWhileElusiveJewel1": 100
+          },
+          "EnchantmentHinder": {
+            "AbyssHinderedEnemiesLifeRegenerationRateJewel1": 500
+          },
+          "EnchantmentBlind": {
+            "AbyssBlindedEnemiesCriticalStrikeChanceJewel1": 500
+          },
+          "EnchantmentWither": {
+            "AbyssWitheredEnemiesAllResistanceJewel1___": 100
+          },
+          "EnchantmentMaim": {
+            "AbyssMaimedEnemiesDamageOverTimeJewel1": 500
+          },
+          "EnchantmentIntimidate": {
+            "AbyssIntimidatedEnemiesStunDurationJewel1": 500
+          }
+        },
+        "delve_prefix": {
+          "FireResistancePenetration": {
+            "DelveJewelFirePenetration1": 1000
+          },
+          "ColdResistancePenetration": {
+            "DelveJewelColdPenetration1": 1000
+          },
+          "LightningResistancePenetration": {
+            "DelveJewelLightningPenetration1": 1000
+          },
+          "PhysicalDamageOverTimeTaken": {
+            "DelveJewelPhysicalDamageOverTimeTaken1": 1000
+          },
+          "LifeRegenerationRatePercentage": {
+            "DelveJewelLifeRegeneration1": 1000
+          },
+          "AllDefences": {
+            "DelveJewelGlobalDefences1": 1000
+          },
+          "ElementalPenetration": {
+            "DelveJewelElementalPenetration1": 1600
+          },
+          "MinionDamage": {
+            "DelveAbyssJewelMinionDamage1": 2000
+          }
+        },
+        "delve_suffix": {
+          "IncreasedChaosDamage": {
+            "DelveJewelChaosDamage1": 1000
+          },
+          "PhysicalDamageReductionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelArmourIfYouHitRecently1": 300
+          },
+          "EvasionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEvasionIfYouHitRecently1": 300
+          },
+          "EnergyShieldRegenerationRatePerMinuteIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEnergyShieldRegenIfYouHitRecently1_": 300
+          },
+          "AilmentDamage": {
+            "DelveJewelAilmentDamage1__": 1000
+          },
+          "AvoidInterruptionWhileCasting": {
+            "DelveJewelAvoidInterruptionWhileCasting1": 1000
+          },
+          "LifeLeechFromAttacksPermyriad": {
+            "DelveJewelAttackLeech1": 1000
+          },
+          "PercentDamageGoesToMana": {
+            "DelveJewelDamageTakenGainedAsMana1": 1000
+          },
+          "ChanceToGainOnslaughtOnFlaskUse": {
+            "DelveJewelChanceToGainOnslaughtOnFlaskUse1": 1000
+          },
+          "AdditionalVaalSoulOnKill": {
+            "DelveJewelVaalSoulsOnKill1": 2000
+          }
+        }
+      }
+    },
+    "not_for_sale,abyss_jewel_ranged,abyss_jewel,default": {
+      "bases": [
+        {
+          "full_name": "Metadata/Items/Jewels/JewelAbyssRanged",
+          "base_name": "Searching Eye Jewel",
+          "released": true,
+          "inherits_from": "Metadata/Items/Jewels/AbstractAbyssJewel"
+        }
+      ],
+      "mods": {
+        "corrupted": {
+          "AvoidIgnite": {
+            "V2AvoidIgniteAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "V2AvoidChillAndFreezeAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidShock": {
+            "V2AvoidShockAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidPoison": {
+            "V2AvoidPoisonAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidBleeding": {
+            "V2AvoidBleedAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidStun": {
+            "V2AvoidStunAbyssalJewelCorrupted": 1000
+          },
+          "CorruptedBloodImmunity": {
+            "V2CorruptedBloodImmunityAbyssalJewelCorrupted": 1000
+          },
+          "YouCannotBeHindered": {
+            "V2HinderImmunityAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedAilmentEffectOnEnemies": {
+            "V2IncreasedAilmentEffectOnEnemiesAbyssalJewelCorrupted": 1000
+          },
+          "AreaOfEffect": {
+            "V2IncreasedAreaOfEffectAbyssalJewelCorrupted": 1000
+          },
+          "CriticalStrikeChance": {
+            "V2IncreasedCriticalStrikeChanceAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedDamage": {
+            "V2IncreasedDamageAbyssJewelCorrupted_": 1000
+          },
+          "AvoidMaimChance": {
+            "V2MaimImmunityCorrupted_": 1000
+          },
+          "MinionDamage": {
+            "V2MinionDamageCorrupted__": 1000
+          },
+          "ReservationEfficiencyForJewel": {
+            "V2ReducedManaReservationCorruptedEfficiency_____": 1000
+          },
+          "ImmuneToSilence": {
+            "V2SilenceImmunityJewelCorrupted__": 1000
+          },
+          "FireResistancePenetration": {
+            "V2FirePenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ColdResistancePenetration": {
+            "V2ColdPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "LightningResistancePenetration": {
+            "V2LightningPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ElementalPenetration": {
+            "V2ElementalPenetrationAbyssalJewelCorrupted_": 1000
+          },
+          "ChanceToIgnoreEnemyArmour": {
+            "V2ArmourPenetrationAbyssalJewelCorrupted": 1000
+          }
+        },
+        "prefix": {
+          "AbyssJewelLife": {
+            "AbyssJewelAddedLife1": 3000,
+            "AbyssJewelAddedLife2": 3000,
+            "AbyssJewelAddedLife3": 1000,
+            "AbyssJewelAddedLife4": 500
+          },
+          "AbyssJewelMana": {
+            "AbyssJewelAddedMana1": 1000,
+            "AbyssJewelAddedMana2": 1000,
+            "AbyssJewelAddedMana3": 1000,
+            "AbyssJewelAddedMana4": 500
+          },
+          "DamageOverTimeWhileDualWielding": {
+            "AbyssDamageOverTimeWhileDualWieldingJewel1": 300,
+            "AbyssDamageOverTimeWhileDualWieldingJewel2": 100
+          },
+          "AddedPhysicalDamageWithWands": {
+            "AbyssAddedPhysicalDamageWithWandsJewel1_": 2350,
+            "AbyssAddedPhysicalDamageWithWandsJewel2": 2350,
+            "AbyssAddedPhysicalDamageWithWandsJewel3_": 2350,
+            "AbyssAddedPhysicalDamageWithWandsJewel4": 1000,
+            "AbyssAddedPhysicalDamageWithWandsJewel5": 500
+          },
+          "AddedLightningDamageWithWands": {
+            "AbyssAddedLightningDamageWithWandsJewel1_": 2350,
+            "AbyssAddedLightningDamageWithWandsJewel2": 2350,
+            "AbyssAddedLightningDamageWithWandsJewel3": 2350,
+            "AbyssAddedLightningDamageWithWandsJewel4": 2350,
+            "AbyssAddedLightningDamageWithWandsJewel5": 1175,
+            "AbyssAddedLightningDamageWithWandsJewel6": 553
+          },
+          "AddedFireDamageWithWands": {
+            "AbyssAddedFireDamageWithWandsJewel1": 2350,
+            "AbyssAddedFireDamageWithWandsJewel2": 2350,
+            "AbyssAddedFireDamageWithWandsJewel3": 2350,
+            "AbyssAddedFireDamageWithWandsJewel4": 2350,
+            "AbyssAddedFireDamageWithWandsJewel5__": 1175,
+            "AbyssAddedFireDamageWithWandsJewel6": 553
+          },
+          "AddedColdDamageWithWands": {
+            "AbyssAddedColdDamageWithWandsJewel1__": 2350,
+            "AbyssAddedColdDamageWithWandsJewel2": 2350,
+            "AbyssAddedColdDamageWithWandsJewel3_": 2350,
+            "AbyssAddedColdDamageWithWandsJewel4": 2350,
+            "AbyssAddedColdDamageWithWandsJewel5": 1175,
+            "AbyssAddedColdDamageWithWandsJewel6": 553
+          },
+          "FlatEnergyShieldRegeneration": {
+            "AbyssFlatEnergyShieldRegenerationJewel1": 250,
+            "AbyssFlatEnergyShieldRegenerationJewel2": 250,
+            "AbyssFlatEnergyShieldRegenerationJewel3": 250
+          },
+          "LifeRegeneration": {
+            "AbyssFlatLifeRegenerationJewel1": 500,
+            "AbyssFlatLifeRegenerationJewel2": 500,
+            "AbyssFlatLifeRegenerationJewel3_": 500
+          },
+          "AddedManaRegeneration": {
+            "AbyssFlatManaShieldRegenerationJewel1": 350,
+            "AbyssFlatManaShieldRegenerationJewel2": 350,
+            "AbyssFlatManaShieldRegenerationJewel3": 350
+          },
+          "PhysicalDamageReductionRating": {
+            "AbyssFlatArmourJewel1": 600,
+            "AbyssFlatArmourJewel2": 600,
+            "AbyssFlatArmourJewel3": 600,
+            "AbyssFlatArmourJewel4__": 300
+          },
+          "EvasionRating": {
+            "AbyssFlatEvasionJewel1": 600,
+            "AbyssFlatEvasionJewel2": 600,
+            "AbyssFlatEvasionJewel3": 600,
+            "AbyssFlatEvasionJewel4_": 300
+          },
+          "EnergyShield": {
+            "AbyssFlatEnergyShieldJewel1": 600,
+            "AbyssFlatEnergyShieldJewel2": 600,
+            "AbyssFlatEnergyShieldJewel3": 600,
+            "AbyssFlatEnergyShieldJewel4": 300
+          },
+          "GlobalCooldownRecovery": {
+            "AbyssCooldownRecoverySpeed1_": 300,
+            "AbyssCooldownRecoverySpeed2__": 300
+          },
+          "ImpaleEffect": {
+            "AbyssImpaleEffect1_": 300,
+            "AbyssImpaleEffect2_": 300
+          },
+          "PercentDamageGoesToMana": {
+            "AbyssDamageRecoupedAsMana1": 100,
+            "AbyssDamageRecoupedAsMana2": 100
+          }
+        },
+        "suffix": {
+          "AbyssJewelChillEffect": {
+            "AbyssJewelChillEffect1_": 500
+          },
+          "AbyssJewelShockEffect": {
+            "AbyssJewelShockEffect1": 500
+          },
+          "StrengthForJewel": {
+            "AbyssStrengthJewel1_": 500
+          },
+          "DexterityForJewel": {
+            "AbyssDexterityJewel1_": 500
+          },
+          "IntelligenceForJewel": {
+            "AbyssIntelligenceJewel1": 500
+          },
+          "StrengthDexterityForJewel": {
+            "AbyssStrengthDexterityJewel1": 500
+          },
+          "StrengthIntelligenceForJewel": {
+            "AbyssStrengthIntelligenceJewel1_": 500
+          },
+          "DexterityIntelligenceForJewel": {
+            "AbyssDexterityIntelligenceJewel1": 500
+          },
+          "AllAttributesForJewel": {
+            "AbyssAllAttributesJewel1": 250
+          },
+          "FireResistanceForJewel": {
+            "AbyssFireResistanceJewel1": 400
+          },
+          "ColdResistanceForJewel": {
+            "AbyssColdResistanceJewel1": 400
+          },
+          "LightningResistanceForJewel": {
+            "AbyssLightningResistanceJewel1": 400
+          },
+          "FireColdResistanceForJewel": {
+            "AbyssFireColdResistanceJewel1": 250
+          },
+          "FireLightningResistanceForJewel": {
+            "AbyssFireLightningResistanceJewel1": 250
+          },
+          "ColdLightningResistanceForJewel": {
+            "AbyssColdLightningResistanceJewel1": 250
+          },
+          "AllResistancesForJewel": {
+            "AbyssAllResistancesJewel1": 200
+          },
+          "ChaosResistanceForJewel": {
+            "AbyssChaosResistanceJewel1": 100
+          },
+          "IncreasedAttackSpeedForJewel": {
+            "AbyssAttackSpeedJewel1_": 750
+          },
+          "CritChanceForJewel": {
+            "AbyssCriticalStrikeChanceJewel1": 900
+          },
+          "CritMultiplierForJewel": {
+            "AbyssCriticalStrikeMultiplierJewel1": 900
+          },
+          "AddedFireSuffix": {
+            "AbyssAddedFireSuffixJewel1": 1000,
+            "AbyssAddedFireSuffixJewel2": 1000,
+            "AbyssAddedFireSuffixJewel3": 1000,
+            "AbyssAddedFireSuffixJewel4_": 500,
+            "AbyssAddedFireSuffixJewel5": 300
+          },
+          "AddedColdSuffix": {
+            "AbyssAddedColdSuffixJewel1": 1000,
+            "AbyssAddedColdSuffixJewel2_": 1000,
+            "AbyssAddedColdSuffixJewel3": 1000,
+            "AbyssAddedColdSuffixJewel4": 500,
+            "AbyssAddedColdSuffixJewel5_": 300
+          },
+          "AddedLightningSuffix": {
+            "AbyssAddedLightningSuffixJewel1": 1000,
+            "AbyssAddedLightningSuffixJewel2": 1000,
+            "AbyssAddedLightningSuffixJewel3": 1000,
+            "AbyssAddedLightningSuffixJewel4": 500,
+            "AbyssAddedLightningSuffixJewel5": 300
+          },
+          "AddedPhysicalSuffix": {
+            "AbyssAddedPhysicalSuffixJewel1": 1000,
+            "AbyssAddedPhysicalSuffixJewel2": 1000,
+            "AbyssAddedPhysicalSuffixJewel3": 500
+          },
+          "AddedChaosSuffix": {
+            "AbyssAddedChaosSuffixJewel1": 750,
+            "AbyssAddedChaosSuffixJewel2": 750,
+            "AbyssAddedChaosSuffixJewel3": 375
+          },
+          "AttacksBlindOnHitChance": {
+            "AbyssAttacksBlindOnHitChanceJewel1": 800,
+            "AbyssAttacksBlindOnHitChanceJewel2___": 400
+          },
+          "DamageVSAbyssMonsters": {
+            "AbyssDamageVSAbyssMonstersJewel1": 500
+          },
+          "ReducedPhysicalDamageTakenVsAbyssMonsters": {
+            "AbyssReducedPhysicalDamageTakenVsAbyssMonsterJewel1": 500
+          },
+          "AvoidIgnite": {
+            "AbyssAvoidIgniteJewel1_": 300,
+            "AbyssAvoidIgniteJewel2": 150
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "AbyssAvoidFreezeAndChillJewel1": 300,
+            "AbyssAvoidFreezeAndChillJewel2": 150
+          },
+          "AvoidShockForJewel": {
+            "AbyssAvoidShockJewel1": 300,
+            "AbyssAvoidShockJewel2": 150
+          },
+          "ChanceToAvoidPoison": {
+            "AbyssAvoidPoisonJewel1__": 300,
+            "AbyssAvoidPoisonJewel2__": 150
+          },
+          "ChanceToAvoidBleeding": {
+            "AbyssAvoidBleedingJewel1": 300,
+            "AbyssAvoidBleedingJewel2": 150
+          },
+          "AvoidStun": {
+            "AbyssAvoidStunJewel1": 300,
+            "AbyssAvoidStunJewel2": 150
+          },
+          "IncreasedAccuracy": {
+            "AbyssAccuracyRatingJewel2": 1000,
+            "AbyssAccuracyRatingJewel3": 1000,
+            "AbyssAccuracyRatingJewel4": 1000,
+            "AbyssAccuracyRatingJewel5": 500
+          },
+          "SpellBlockChanceIfHitRecently": {
+            "AbyssSpellBlockChanceIfHitRecentlyJewel1": 250,
+            "AbyssSpellDodgeAndDodgeChanceIfHitRecentlyJewel1": 500
+          },
+          "ReducedPhysicalDamageTakenIfNotHitRecently": {
+            "AbyssReducedPhysicalDamageTakenIfNotHitRecentlyJewel1": 250
+          },
+          "MovementSpeedIfNotDamagedRecently": {
+            "AbyssMovementSpeedIfNotDamagedRecentlyJewel1": 500
+          },
+          "DamageIfEnemySlainRecently": {
+            "AbyssDamageIfEnemySlainRecentlyJewel1": 250
+          },
+          "CriticalStrikeMultiplierIfEnemySlainRecently": {
+            "AbyssCriticalStrikeMultiplierIfEnemySlainRecentlyJewel1": 250
+          },
+          "IncreasedArmourIfNoEnemySlainRecently": {
+            "AbyssIncreasedArmourIfNoEnemySlainRecentlyJewel1__": 250
+          },
+          "DamagePenetratesElementalResistancesIfNoEnemySlainRecently": {
+            "AbyssDamagePenetratesElementalResistancesIfNoEnemySlainRecentlyJewel1": 250
+          },
+          "EvasionRatingWhileMoving": {
+            "AbyssEvasionRatingWhileMovingJewel1": 500
+          },
+          "ManaRegenerationRateWhileMoving": {
+            "AbyssManaRegenerationRateWhileMovingJewel1": 250
+          },
+          "LifeRegenerationRateWhileMoving": {
+            "AbyssLifeRegenerationRateWhileMovingJewel1": 250
+          },
+          "PhysicalDamageAddedAsExtraFireIfCriticalStrikeDealtRecently": {
+            "AbyssPhysicalDamageAddedAsExtraFireIfCriticalStrikeDealtRecentlyJewel1": 150
+          },
+          "AttackSpeedIfCriticalStrikeDealtRecently": {
+            "AbyssAttackSpeedIfCriticalStrikeDealtRecentlyJewel1": 500
+          },
+          "CastSpeedIfCriticalStrikeDealtRecently": {
+            "AbyssCastSpeedIfCriticalStrikeDealtRecentlyJewel1": 250
+          },
+          "CriticalStrikeChanceIfNoCriticalStrikeDealtRecently": {
+            "AbyssCriticalStrikeChanceIfNoCriticalStrikeDealtRecentlyJewel1": 250
+          },
+          "MovementSpeedIfEnemySlainRecently": {
+            "AbyssMovementSpeedIfEnemySlainRecentlyJewel1": 500
+          },
+          "ChanceToBlockIfDamagedRecently": {
+            "AbyssChanceToBlockIfDamagedRecentlyJewel1_": 250
+          },
+          "ChancetoGainPhasingOnKill": {
+            "AbyssChancetoGainPhasingOnKillJewel1": 1000,
+            "AbyssChancetoGainPhasingOnKillJewel2": 500
+          },
+          "EnchantmentConsecratedGround": {
+            "AbyssSelfCurseEffectOnConsecratedGroundJewel1__": 100
+          },
+          "EnchantmentElusive": {
+            "AbyssAvoidElementalAilmentsWhileElusiveJewel1": 500
+          },
+          "EnchantmentHinder": {
+            "AbyssHinderedEnemiesLifeRegenerationRateJewel1": 100
+          },
+          "EnchantmentBlind": {
+            "AbyssBlindedEnemiesCriticalStrikeChanceJewel1": 500
+          },
+          "EnchantmentWither": {
+            "AbyssWitheredEnemiesAllResistanceJewel1___": 100
+          },
+          "EnchantmentMaim": {
+            "AbyssMaimedEnemiesDamageOverTimeJewel1": 500
+          },
+          "EnchantmentIntimidate": {
+            "AbyssIntimidatedEnemiesStunDurationJewel1": 100
+          }
+        },
+        "delve_prefix": {
+          "FireResistancePenetration": {
+            "DelveJewelFirePenetration1": 1000
+          },
+          "ColdResistancePenetration": {
+            "DelveJewelColdPenetration1": 1000
+          },
+          "LightningResistancePenetration": {
+            "DelveJewelLightningPenetration1": 1000
+          },
+          "PhysicalDamageOverTimeTaken": {
+            "DelveJewelPhysicalDamageOverTimeTaken1": 1000
+          },
+          "LifeRegenerationRatePercentage": {
+            "DelveJewelLifeRegeneration1": 1000
+          },
+          "AllDefences": {
+            "DelveJewelGlobalDefences1": 1000
+          },
+          "ElementalPenetration": {
+            "DelveJewelElementalPenetration1": 1600
+          },
+          "MinionDamage": {
+            "DelveAbyssJewelMinionDamage1": 2000
+          }
+        },
+        "delve_suffix": {
+          "IncreasedChaosDamage": {
+            "DelveJewelChaosDamage1": 1000
+          },
+          "PhysicalDamageReductionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelArmourIfYouHitRecently1": 300
+          },
+          "EvasionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEvasionIfYouHitRecently1": 300
+          },
+          "EnergyShieldRegenerationRatePerMinuteIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEnergyShieldRegenIfYouHitRecently1_": 300
+          },
+          "AilmentDamage": {
+            "DelveJewelAilmentDamage1__": 1000
+          },
+          "AvoidInterruptionWhileCasting": {
+            "DelveJewelAvoidInterruptionWhileCasting1": 1000
+          },
+          "LifeLeechFromAttacksPermyriad": {
+            "DelveJewelAttackLeech1": 1000
+          },
+          "PercentDamageGoesToMana": {
+            "DelveJewelDamageTakenGainedAsMana1": 1000
+          },
+          "ChanceToGainOnslaughtOnFlaskUse": {
+            "DelveJewelChanceToGainOnslaughtOnFlaskUse1": 1000
+          },
+          "AdditionalVaalSoulOnKill": {
+            "DelveJewelVaalSoulsOnKill1": 2000
+          }
+        }
+      }
+    },
+    "not_for_sale,abyss_jewel_caster,abyss_jewel,default": {
+      "bases": [
+        {
+          "full_name": "Metadata/Items/Jewels/JewelAbyssCaster",
+          "base_name": "Hypnotic Eye Jewel",
+          "released": true,
+          "inherits_from": "Metadata/Items/Jewels/AbstractAbyssJewel"
+        }
+      ],
+      "mods": {
+        "corrupted": {
+          "AvoidIgnite": {
+            "V2AvoidIgniteAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "V2AvoidChillAndFreezeAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidShock": {
+            "V2AvoidShockAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidPoison": {
+            "V2AvoidPoisonAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidBleeding": {
+            "V2AvoidBleedAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidStun": {
+            "V2AvoidStunAbyssalJewelCorrupted": 1000
+          },
+          "CorruptedBloodImmunity": {
+            "V2CorruptedBloodImmunityAbyssalJewelCorrupted": 1000
+          },
+          "YouCannotBeHindered": {
+            "V2HinderImmunityAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedAilmentEffectOnEnemies": {
+            "V2IncreasedAilmentEffectOnEnemiesAbyssalJewelCorrupted": 1000
+          },
+          "AreaOfEffect": {
+            "V2IncreasedAreaOfEffectAbyssalJewelCorrupted": 1000
+          },
+          "CriticalStrikeChance": {
+            "V2IncreasedCriticalStrikeChanceAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedDamage": {
+            "V2IncreasedDamageAbyssJewelCorrupted_": 1000
+          },
+          "AvoidMaimChance": {
+            "V2MaimImmunityCorrupted_": 1000
+          },
+          "MinionDamage": {
+            "V2MinionDamageCorrupted__": 1000
+          },
+          "ReservationEfficiencyForJewel": {
+            "V2ReducedManaReservationCorruptedEfficiency_____": 1000
+          },
+          "ImmuneToSilence": {
+            "V2SilenceImmunityJewelCorrupted__": 1000
+          },
+          "FireResistancePenetration": {
+            "V2FirePenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ColdResistancePenetration": {
+            "V2ColdPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "LightningResistancePenetration": {
+            "V2LightningPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ElementalPenetration": {
+            "V2ElementalPenetrationAbyssalJewelCorrupted_": 1000
+          },
+          "ChanceToIgnoreEnemyArmour": {
+            "V2ArmourPenetrationAbyssalJewelCorrupted": 1000
+          }
+        },
+        "prefix": {
+          "AbyssJewelLife": {
+            "AbyssJewelAddedLife1": 3000,
+            "AbyssJewelAddedLife2": 3000,
+            "AbyssJewelAddedLife3": 1000,
+            "AbyssJewelAddedLife4": 500
+          },
+          "AbyssJewelMana": {
+            "AbyssJewelAddedMana1": 1000,
+            "AbyssJewelAddedMana2": 1000,
+            "AbyssJewelAddedMana3": 1000,
+            "AbyssJewelAddedMana4": 500
+          },
+          "DamageOverTimeWhileDualWielding": {
+            "AbyssDamageOverTimeWhileDualWieldingJewel1": 600,
+            "AbyssDamageOverTimeWhileDualWieldingJewel2": 200
+          },
+          "SpellAddedFireDamageWhileDualWielding": {
+            "AbyssSpellAddedFireDamageWhileDualWieldingJewel1": 700,
+            "AbyssSpellAddedFireDamageWhileDualWieldingJewel2": 700,
+            "AbyssSpellAddedFireDamageWhileDualWieldingJewel3": 700,
+            "AbyssSpellAddedFireDamageWhileDualWieldingJewel4": 700,
+            "AbyssSpellAddedFireDamageWhileDualWieldingJewel5_": 350,
+            "AbyssSpellAddedFireDamageWhileDualWieldingJewel6": 175
+          },
+          "SpellAddedColdDamageWhileDualWielding": {
+            "AbyssSpellAddedColdDamageWhileDualWieldingJewel1": 700,
+            "AbyssSpellAddedColdDamageWhileDualWieldingJewel2": 700,
+            "AbyssSpellAddedColdDamageWhileDualWieldingJewel3": 700,
+            "AbyssSpellAddedColdDamageWhileDualWieldingJewel4__": 700,
+            "AbyssSpellAddedColdDamageWhileDualWieldingJewel5": 350,
+            "AbyssSpellAddedColdDamageWhileDualWieldingJewel6": 175
+          },
+          "SpellAddedLightningDamageWhileDualWielding": {
+            "AbyssSpellAddedLightningDamageWhileDualWieldingJewel1": 700,
+            "AbyssSpellAddedLightningDamageWhileDualWieldingJewel2": 700,
+            "AbyssSpellAddedLightningDamageWhileDualWieldingJewel3": 700,
+            "AbyssSpellAddedLightningDamageWhileDualWieldingJewel4": 700,
+            "AbyssSpellAddedLightningDamageWhileDualWieldingJewel5_": 350,
+            "AbyssSpellAddedLightningDamageWhileDualWieldingJewel6": 175
+          },
+          "SpellAddedPhysicalDamageWhileDualWielding": {
+            "AbyssSpellAddedPhysicalDamageWhileDualWieldingJewel1": 700,
+            "AbyssSpellAddedPhysicalDamageWhileDualWieldingJewel2": 700,
+            "AbyssSpellAddedPhysicalDamageWhileDualWieldingJewel3": 700,
+            "AbyssSpellAddedPhysicalDamageWhileDualWieldingJewel4": 700,
+            "AbyssSpellAddedPhysicalDamageWhileDualWieldingJewel5": 350,
+            "AbyssSpellAddedPhysicalDamageWhileDualWieldingJewel6": 175
+          },
+          "SpellAddedChaosDamageWhileDualWielding": {
+            "AbyssSpellAddedChaosDamageWhileDualWieldingJewel1": 700,
+            "AbyssSpellAddedChaosDamageWhileDualWieldingJewel2": 700,
+            "AbyssSpellAddedChaosDamageWhileDualWieldingJewel3": 700,
+            "AbyssSpellAddedChaosDamageWhileDualWieldingJewel4": 700,
+            "AbyssSpellAddedChaosDamageWhileDualWieldingJewel5": 350,
+            "AbyssSpellAddedChaosDamageWhileDualWieldingJewel6": 175
+          },
+          "FlatEnergyShieldRegeneration": {
+            "AbyssFlatEnergyShieldRegenerationJewel1": 500,
+            "AbyssFlatEnergyShieldRegenerationJewel2": 500,
+            "AbyssFlatEnergyShieldRegenerationJewel3": 500
+          },
+          "LifeRegeneration": {
+            "AbyssFlatLifeRegenerationJewel1": 250,
+            "AbyssFlatLifeRegenerationJewel2": 250,
+            "AbyssFlatLifeRegenerationJewel3_": 250
+          },
+          "AddedManaRegeneration": {
+            "AbyssFlatManaShieldRegenerationJewel1": 350,
+            "AbyssFlatManaShieldRegenerationJewel2": 350,
+            "AbyssFlatManaShieldRegenerationJewel3": 350
+          },
+          "PhysicalDamageReductionRating": {
+            "AbyssFlatArmourJewel1": 600,
+            "AbyssFlatArmourJewel2": 600,
+            "AbyssFlatArmourJewel3": 600,
+            "AbyssFlatArmourJewel4__": 300
+          },
+          "EvasionRating": {
+            "AbyssFlatEvasionJewel1": 600,
+            "AbyssFlatEvasionJewel2": 600,
+            "AbyssFlatEvasionJewel3": 600,
+            "AbyssFlatEvasionJewel4_": 300
+          },
+          "EnergyShield": {
+            "AbyssFlatEnergyShieldJewel1": 600,
+            "AbyssFlatEnergyShieldJewel2": 600,
+            "AbyssFlatEnergyShieldJewel3": 600,
+            "AbyssFlatEnergyShieldJewel4": 300
+          },
+          "GlobalCooldownRecovery": {
+            "AbyssCooldownRecoverySpeed1_": 100,
+            "AbyssCooldownRecoverySpeed2__": 100
+          },
+          "ImpaleEffect": {
+            "AbyssImpaleEffect1_": 100,
+            "AbyssImpaleEffect2_": 100
+          },
+          "PercentDamageGoesToMana": {
+            "AbyssDamageRecoupedAsMana1": 300,
+            "AbyssDamageRecoupedAsMana2": 300
+          }
+        },
+        "suffix": {
+          "AbyssJewelChillEffect": {
+            "AbyssJewelChillEffect1_": 500
+          },
+          "AbyssJewelShockEffect": {
+            "AbyssJewelShockEffect1": 500
+          },
+          "StrengthForJewel": {
+            "AbyssStrengthJewel1_": 500
+          },
+          "DexterityForJewel": {
+            "AbyssDexterityJewel1_": 500
+          },
+          "IntelligenceForJewel": {
+            "AbyssIntelligenceJewel1": 500
+          },
+          "StrengthDexterityForJewel": {
+            "AbyssStrengthDexterityJewel1": 500
+          },
+          "StrengthIntelligenceForJewel": {
+            "AbyssStrengthIntelligenceJewel1_": 500
+          },
+          "DexterityIntelligenceForJewel": {
+            "AbyssDexterityIntelligenceJewel1": 500
+          },
+          "AllAttributesForJewel": {
+            "AbyssAllAttributesJewel1": 250
+          },
+          "FireResistanceForJewel": {
+            "AbyssFireResistanceJewel1": 400
+          },
+          "ColdResistanceForJewel": {
+            "AbyssColdResistanceJewel1": 400
+          },
+          "LightningResistanceForJewel": {
+            "AbyssLightningResistanceJewel1": 400
+          },
+          "FireColdResistanceForJewel": {
+            "AbyssFireColdResistanceJewel1": 250
+          },
+          "FireLightningResistanceForJewel": {
+            "AbyssFireLightningResistanceJewel1": 250
+          },
+          "ColdLightningResistanceForJewel": {
+            "AbyssColdLightningResistanceJewel1": 250
+          },
+          "AllResistancesForJewel": {
+            "AbyssAllResistancesJewel1": 200
+          },
+          "ChaosResistanceForJewel": {
+            "AbyssChaosResistanceJewel1": 100
+          },
+          "IncreasedCastSpeedForJewel": {
+            "AbyssCastSpeedJewel1": 750
+          },
+          "CritChanceForJewel": {
+            "AbyssCriticalStrikeChanceJewel1": 900
+          },
+          "CritMultiplierForJewel": {
+            "AbyssCriticalStrikeMultiplierJewel1": 900
+          },
+          "SpellAddedFireSuffix": {
+            "AbyssSpellAddedFireDamageJewel1": 700,
+            "AbyssSpellAddedFireDamageJewel2_": 700,
+            "AbyssSpellAddedFireDamageJewel3": 700,
+            "AbyssSpellAddedFireDamageJewel4": 350,
+            "AbyssSpellAddedFireDamageJewel5": 175
+          },
+          "SpellAddedColdSuffix": {
+            "AbyssSpellAddedColdDamageJewel1": 700,
+            "AbyssSpellAddedColdDamageJewel2": 700,
+            "AbyssSpellAddedColdDamageJewel3": 700,
+            "AbyssSpellAddedColdDamageJewel4": 350,
+            "AbyssSpellAddedColdDamageJewel5": 175
+          },
+          "SpellAddedLightningSuffix": {
+            "AbyssSpellAddedLightningDamageJewel1__": 700,
+            "AbyssSpellAddedLightningDamageJewel2": 700,
+            "AbyssSpellAddedLightningDamageJewel3__": 700,
+            "AbyssSpellAddedLightningDamageJewel4": 350,
+            "AbyssSpellAddedLightningDamageJewel5_": 175
+          },
+          "SpellAddedPhysicalSuffix": {
+            "AbyssSpellAddedPhysicalDamageJewel1": 700,
+            "AbyssSpellAddedPhysicalDamageJewel2": 700,
+            "AbyssSpellAddedPhysicalDamageJewel3": 700,
+            "AbyssSpellAddedPhysicalDamageJewel4": 350,
+            "AbyssSpellAddedPhysicalDamageJewel5__": 175
+          },
+          "SpellAddedChaosSuffix": {
+            "AbyssSpellAddedChaosDamageJewel1": 700,
+            "AbyssSpellAddedChaosDamageJewel2": 700,
+            "AbyssSpellAddedChaosDamageJewel3": 700,
+            "AbyssSpellAddedChaosDamageJewel4": 350,
+            "AbyssSpellAddedChaosDamageJewel5": 175
+          },
+          "SpellsHinderOnHitChance": {
+            "AbyssSpellsHinderOnHitChanceJewel1": 800,
+            "AbyssSpellsHinderOnHitChanceJewel2": 400
+          },
+          "DamageVSAbyssMonsters": {
+            "AbyssDamageVSAbyssMonstersJewel1": 500
+          },
+          "ReducedPhysicalDamageTakenVsAbyssMonsters": {
+            "AbyssReducedPhysicalDamageTakenVsAbyssMonsterJewel1": 500
+          },
+          "AvoidIgnite": {
+            "AbyssAvoidIgniteJewel1_": 300,
+            "AbyssAvoidIgniteJewel2": 150
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "AbyssAvoidFreezeAndChillJewel1": 300,
+            "AbyssAvoidFreezeAndChillJewel2": 150
+          },
+          "AvoidShockForJewel": {
+            "AbyssAvoidShockJewel1": 300,
+            "AbyssAvoidShockJewel2": 150
+          },
+          "ChanceToAvoidPoison": {
+            "AbyssAvoidPoisonJewel1__": 300,
+            "AbyssAvoidPoisonJewel2__": 150
+          },
+          "ChanceToAvoidBleeding": {
+            "AbyssAvoidBleedingJewel1": 300,
+            "AbyssAvoidBleedingJewel2": 150
+          },
+          "AvoidStun": {
+            "AbyssAvoidStunJewel1": 300,
+            "AbyssAvoidStunJewel2": 150
+          },
+          "SpellBlockChanceIfHitRecently": {
+            "AbyssSpellBlockChanceIfHitRecentlyJewel1": 500,
+            "AbyssSpellDodgeAndDodgeChanceIfHitRecentlyJewel1": 250
+          },
+          "ReducedPhysicalDamageTakenIfNotHitRecently": {
+            "AbyssReducedPhysicalDamageTakenIfNotHitRecentlyJewel1": 250
+          },
+          "MovementSpeedIfNotDamagedRecently": {
+            "AbyssMovementSpeedIfNotDamagedRecentlyJewel1": 250
+          },
+          "DamageIfEnemySlainRecently": {
+            "AbyssDamageIfEnemySlainRecentlyJewel1": 250
+          },
+          "CriticalStrikeMultiplierIfEnemySlainRecently": {
+            "AbyssCriticalStrikeMultiplierIfEnemySlainRecentlyJewel1": 500
+          },
+          "IncreasedArmourIfNoEnemySlainRecently": {
+            "AbyssIncreasedArmourIfNoEnemySlainRecentlyJewel1__": 250
+          },
+          "DamagePenetratesElementalResistancesIfNoEnemySlainRecently": {
+            "AbyssDamagePenetratesElementalResistancesIfNoEnemySlainRecentlyJewel1": 500
+          },
+          "EvasionRatingWhileMoving": {
+            "AbyssEvasionRatingWhileMovingJewel1": 250
+          },
+          "ManaRegenerationRateWhileMoving": {
+            "AbyssManaRegenerationRateWhileMovingJewel1": 500
+          },
+          "LifeRegenerationRateWhileMoving": {
+            "AbyssLifeRegenerationRateWhileMovingJewel1": 250
+          },
+          "PhysicalDamageAddedAsExtraFireIfCriticalStrikeDealtRecently": {
+            "AbyssPhysicalDamageAddedAsExtraFireIfCriticalStrikeDealtRecentlyJewel1": 150
+          },
+          "AttackSpeedIfCriticalStrikeDealtRecently": {
+            "AbyssAttackSpeedIfCriticalStrikeDealtRecentlyJewel1": 250
+          },
+          "CastSpeedIfCriticalStrikeDealtRecently": {
+            "AbyssCastSpeedIfCriticalStrikeDealtRecentlyJewel1": 500
+          },
+          "CriticalStrikeChanceIfNoCriticalStrikeDealtRecently": {
+            "AbyssCriticalStrikeChanceIfNoCriticalStrikeDealtRecentlyJewel1": 500
+          },
+          "MovementSpeedIfEnemySlainRecently": {
+            "AbyssMovementSpeedIfEnemySlainRecentlyJewel1": 250
+          },
+          "ChanceToBlockIfDamagedRecently": {
+            "AbyssChanceToBlockIfDamagedRecentlyJewel1_": 250
+          },
+          "ChancetoGainPhasingOnKill": {
+            "AbyssChancetoGainPhasingOnKillJewel1": 1000,
+            "AbyssChancetoGainPhasingOnKillJewel2": 500
+          },
+          "EnchantmentConsecratedGround": {
+            "AbyssSelfCurseEffectOnConsecratedGroundJewel1__": 500
+          },
+          "EnchantmentElusive": {
+            "AbyssAvoidElementalAilmentsWhileElusiveJewel1": 100
+          },
+          "EnchantmentHinder": {
+            "AbyssHinderedEnemiesLifeRegenerationRateJewel1": 500
+          },
+          "EnchantmentBlind": {
+            "AbyssBlindedEnemiesCriticalStrikeChanceJewel1": 100
+          },
+          "EnchantmentWither": {
+            "AbyssWitheredEnemiesAllResistanceJewel1___": 500
+          },
+          "EnchantmentMaim": {
+            "AbyssMaimedEnemiesDamageOverTimeJewel1": 100
+          },
+          "EnchantmentIntimidate": {
+            "AbyssIntimidatedEnemiesStunDurationJewel1": 100
+          }
+        },
+        "delve_prefix": {
+          "FireResistancePenetration": {
+            "DelveJewelFirePenetration1": 1000
+          },
+          "ColdResistancePenetration": {
+            "DelveJewelColdPenetration1": 1000
+          },
+          "LightningResistancePenetration": {
+            "DelveJewelLightningPenetration1": 1000
+          },
+          "PhysicalDamageOverTimeTaken": {
+            "DelveJewelPhysicalDamageOverTimeTaken1": 1000
+          },
+          "LifeRegenerationRatePercentage": {
+            "DelveJewelLifeRegeneration1": 1000
+          },
+          "AllDefences": {
+            "DelveJewelGlobalDefences1": 1000
+          },
+          "ElementalPenetration": {
+            "DelveJewelElementalPenetration1": 1600
+          },
+          "MinionDamage": {
+            "DelveAbyssJewelMinionDamage1": 2000
+          }
+        },
+        "delve_suffix": {
+          "IncreasedChaosDamage": {
+            "DelveJewelChaosDamage1": 1000
+          },
+          "PhysicalDamageReductionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelArmourIfYouHitRecently1": 300
+          },
+          "EvasionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEvasionIfYouHitRecently1": 300
+          },
+          "EnergyShieldRegenerationRatePerMinuteIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEnergyShieldRegenIfYouHitRecently1_": 300
+          },
+          "AilmentDamage": {
+            "DelveJewelAilmentDamage1__": 1000
+          },
+          "AvoidInterruptionWhileCasting": {
+            "DelveJewelAvoidInterruptionWhileCasting1": 1000
+          },
+          "LifeLeechFromAttacksPermyriad": {
+            "DelveJewelAttackLeech1": 1000
+          },
+          "PercentDamageGoesToMana": {
+            "DelveJewelDamageTakenGainedAsMana1": 1000
+          },
+          "ChanceToGainOnslaughtOnFlaskUse": {
+            "DelveJewelChanceToGainOnslaughtOnFlaskUse1": 1000
+          },
+          "AdditionalVaalSoulOnKill": {
+            "DelveJewelVaalSoulsOnKill1": 2000
+          }
+        }
+      }
+    },
+    "not_for_sale,abyss_jewel_summoner,abyss_jewel,default": {
+      "bases": [
+        {
+          "full_name": "Metadata/Items/Jewels/JewelAbyssSummoner",
+          "base_name": "Ghastly Eye Jewel",
+          "released": true,
+          "inherits_from": "Metadata/Items/Jewels/AbstractAbyssJewel"
+        }
+      ],
+      "mods": {
+        "corrupted": {
+          "AvoidIgnite": {
+            "V2AvoidIgniteAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "V2AvoidChillAndFreezeAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidShock": {
+            "V2AvoidShockAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidPoison": {
+            "V2AvoidPoisonAbyssalJewelCorrupted": 1000
+          },
+          "ChanceToAvoidBleeding": {
+            "V2AvoidBleedAbyssalJewelCorrupted_": 1000
+          },
+          "AvoidStun": {
+            "V2AvoidStunAbyssalJewelCorrupted": 1000
+          },
+          "CorruptedBloodImmunity": {
+            "V2CorruptedBloodImmunityAbyssalJewelCorrupted": 1000
+          },
+          "YouCannotBeHindered": {
+            "V2HinderImmunityAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedAilmentEffectOnEnemies": {
+            "V2IncreasedAilmentEffectOnEnemiesAbyssalJewelCorrupted": 1000
+          },
+          "AreaOfEffect": {
+            "V2IncreasedAreaOfEffectAbyssalJewelCorrupted": 1000
+          },
+          "CriticalStrikeChance": {
+            "V2IncreasedCriticalStrikeChanceAbyssalJewelCorrupted": 1000
+          },
+          "IncreasedDamage": {
+            "V2IncreasedDamageAbyssJewelCorrupted_": 1000
+          },
+          "AvoidMaimChance": {
+            "V2MaimImmunityCorrupted_": 1000
+          },
+          "MinionDamage": {
+            "V2MinionDamageCorrupted__": 1000
+          },
+          "ReservationEfficiencyForJewel": {
+            "V2ReducedManaReservationCorruptedEfficiency_____": 1000
+          },
+          "ImmuneToSilence": {
+            "V2SilenceImmunityJewelCorrupted__": 1000
+          },
+          "FireResistancePenetration": {
+            "V2FirePenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ColdResistancePenetration": {
+            "V2ColdPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "LightningResistancePenetration": {
+            "V2LightningPenetrationAbyssalJewelCorrupted": 1000
+          },
+          "ElementalPenetration": {
+            "V2ElementalPenetrationAbyssalJewelCorrupted_": 1000
+          },
+          "ChanceToIgnoreEnemyArmour": {
+            "V2ArmourPenetrationAbyssalJewelCorrupted": 1000
+          }
+        },
+        "prefix": {
+          "AbyssJewelLife": {
+            "AbyssJewelAddedLife1": 3000,
+            "AbyssJewelAddedLife2": 3000,
+            "AbyssJewelAddedLife3": 1000,
+            "AbyssJewelAddedLife4": 500
+          },
+          "AbyssJewelMana": {
+            "AbyssJewelAddedMana1": 1000,
+            "AbyssJewelAddedMana2": 1000,
+            "AbyssJewelAddedMana3": 1000,
+            "AbyssJewelAddedMana4": 500
+          },
+          "MinionAddedFireDamage": {
+            "AbyssMinionAddedFireDamageJewel1": 700,
+            "AbyssMinionAddedFireDamageJewel2": 700,
+            "AbyssMinionAddedFireDamageJewel3": 700,
+            "AbyssMinionAddedFireDamageJewel4_": 700,
+            "AbyssMinionAddedFireDamageJewel5": 350,
+            "AbyssMinionAddedFireDamageJewel6_": 175
+          },
+          "MinionAddedColdDamage": {
+            "AbyssMinionAddedColdDamageJewel1": 700,
+            "AbyssMinionAddedColdDamageJewel2": 700,
+            "AbyssMinionAddedColdDamageJewel3": 700,
+            "AbyssMinionAddedColdDamageJewel4": 700,
+            "AbyssMinionAddedColdDamageJewel5": 350,
+            "AbyssMinionAddedColdDamageJewel6_": 175
+          },
+          "MinionAddedLightningDamage": {
+            "AbyssMinionAddedLightningDamageJewel1_": 700,
+            "AbyssMinionAddedLightningDamageJewel2": 700,
+            "AbyssMinionAddedLightningDamageJewel3_": 700,
+            "AbyssMinionAddedLightningDamageJewel4": 700,
+            "AbyssMinionAddedLightningDamageJewel5": 350,
+            "AbyssMinionAddedLightningDamageJewel6": 175
+          },
+          "MinionAddedPhysicalDamage": {
+            "AbyssMinionAddedPhysicalDamageJewel1": 700,
+            "AbyssMinionAddedPhysicalDamageJewel2": 700,
+            "AbyssMinionAddedPhysicalDamageJewel3": 700,
+            "AbyssMinionAddedPhysicalDamageJewel4": 700,
+            "AbyssMinionAddedPhysicalDamageJewel5": 350,
+            "AbyssMinionAddedPhysicalDamageJewel6": 175
+          },
+          "MinionAddedChaosDamage": {
+            "AbyssMinionAddedChaosDamageJewel1": 700,
+            "AbyssMinionAddedChaosDamageJewel2_": 700,
+            "AbyssMinionAddedChaosDamageJewel3": 700,
+            "AbyssMinionAddedChaosDamageJewel4": 700,
+            "AbyssMinionAddedChaosDamageJewel5_": 350,
+            "AbyssMinionAddedChaosDamageJewel6": 175
+          },
+          "FlatMinionLifeRegeneration": {
+            "AbyssFlatMinionLifeRegenerationJewel1": 500,
+            "AbyssFlatMinionLifeRegenerationJewel2": 500,
+            "AbyssFlatMinionLifeRegenerationJewel3": 500
+          },
+          "FlatEnergyShieldRegeneration": {
+            "AbyssFlatEnergyShieldRegenerationJewel1": 500,
+            "AbyssFlatEnergyShieldRegenerationJewel2": 500,
+            "AbyssFlatEnergyShieldRegenerationJewel3": 500
+          },
+          "LifeRegeneration": {
+            "AbyssFlatLifeRegenerationJewel1": 250,
+            "AbyssFlatLifeRegenerationJewel2": 250,
+            "AbyssFlatLifeRegenerationJewel3_": 250
+          },
+          "AddedManaRegeneration": {
+            "AbyssFlatManaShieldRegenerationJewel1": 350,
+            "AbyssFlatManaShieldRegenerationJewel2": 350,
+            "AbyssFlatManaShieldRegenerationJewel3": 350
+          },
+          "PhysicalDamageReductionRating": {
+            "AbyssFlatArmourJewel1": 600,
+            "AbyssFlatArmourJewel2": 600,
+            "AbyssFlatArmourJewel3": 600,
+            "AbyssFlatArmourJewel4__": 300
+          },
+          "EvasionRating": {
+            "AbyssFlatEvasionJewel1": 600,
+            "AbyssFlatEvasionJewel2": 600,
+            "AbyssFlatEvasionJewel3": 600,
+            "AbyssFlatEvasionJewel4_": 300
+          },
+          "EnergyShield": {
+            "AbyssFlatEnergyShieldJewel1": 600,
+            "AbyssFlatEnergyShieldJewel2": 600,
+            "AbyssFlatEnergyShieldJewel3": 600,
+            "AbyssFlatEnergyShieldJewel4": 300
+          },
+          "GlobalCooldownRecovery": {
+            "AbyssCooldownRecoverySpeed1_": 100,
+            "AbyssCooldownRecoverySpeed2__": 100
+          },
+          "ImpaleEffect": {
+            "AbyssImpaleEffect1_": 100,
+            "AbyssImpaleEffect2_": 100
+          },
+          "PercentDamageGoesToMana": {
+            "AbyssDamageRecoupedAsMana1": 300,
+            "AbyssDamageRecoupedAsMana2": 300
+          }
+        },
+        "suffix": {
+          "StrengthForJewel": {
+            "AbyssStrengthJewel1_": 500
+          },
+          "DexterityForJewel": {
+            "AbyssDexterityJewel1_": 500
+          },
+          "IntelligenceForJewel": {
+            "AbyssIntelligenceJewel1": 500
+          },
+          "StrengthDexterityForJewel": {
+            "AbyssStrengthDexterityJewel1": 500
+          },
+          "StrengthIntelligenceForJewel": {
+            "AbyssStrengthIntelligenceJewel1_": 500
+          },
+          "DexterityIntelligenceForJewel": {
+            "AbyssDexterityIntelligenceJewel1": 500
+          },
+          "AllAttributesForJewel": {
+            "AbyssAllAttributesJewel1": 250
+          },
+          "FireResistanceForJewel": {
+            "AbyssFireResistanceJewel1": 400
+          },
+          "ColdResistanceForJewel": {
+            "AbyssColdResistanceJewel1": 400
+          },
+          "LightningResistanceForJewel": {
+            "AbyssLightningResistanceJewel1": 400
+          },
+          "FireColdResistanceForJewel": {
+            "AbyssFireColdResistanceJewel1": 250
+          },
+          "FireLightningResistanceForJewel": {
+            "AbyssFireLightningResistanceJewel1": 250
+          },
+          "ColdLightningResistanceForJewel": {
+            "AbyssColdLightningResistanceJewel1": 250
+          },
+          "AllResistancesForJewel": {
+            "AbyssAllResistancesJewel1": 200
+          },
+          "ChaosResistanceForJewel": {
+            "AbyssChaosResistanceJewel1": 100
+          },
+          "IncreasedCastSpeedForJewel": {
+            "AbyssCastSpeedJewel1": 750
+          },
+          "MinionAttacksBlindOnHitChance": {
+            "AbyssMinionAttacksBlindOnHitChanceJewel1": 800,
+            "AbyssMinionAttacksBlindOnHitChanceJewel2": 400
+          },
+          "MinionAttacksTauntOnHitChance": {
+            "AbyssMinionAttacksTauntOnHitChanceJewel1": 800,
+            "AbyssMinionAttacksTauntOnHitChanceJewel2_": 400
+          },
+          "MinionSpellsHinderOnHitChance": {
+            "AbyssMinionSpellsHinderOnHitChanceJewel1": 800,
+            "AbyssMinionSpellsHinderOnHitChanceJewel2": 400
+          },
+          "AbyssMinionPoisonOnHitChance": {
+            "AbyssMinionPoisonOnHitChanceJewel1": 400
+          },
+          "AbyssMinionIgniteOnHitChance": {
+            "AbyssMinionIgniteOnHitChanceJewel1": 400
+          },
+          "AbyssMinionAttacksBleedOnHitChance": {
+            "AbyssMinionAttacksBleedOnHitChanceJewel1": 400
+          },
+          "MinionDamageVSAbyssMonsters": {
+            "AbyssMinionDamageVSAbyssMonstersJewel1": 500
+          },
+          "ReducedPhysicalDamageTakenVsAbyssMonsters": {
+            "AbyssReducedPhysicalDamageTakenVsAbyssMonsterJewel1": 500
+          },
+          "AvoidIgnite": {
+            "AbyssAvoidIgniteJewel1_": 300,
+            "AbyssAvoidIgniteJewel2": 150
+          },
+          "ChanceToAvoidFreezeAndChill": {
+            "AbyssAvoidFreezeAndChillJewel1": 300,
+            "AbyssAvoidFreezeAndChillJewel2": 150
+          },
+          "AvoidShockForJewel": {
+            "AbyssAvoidShockJewel1": 300,
+            "AbyssAvoidShockJewel2": 150
+          },
+          "ChanceToAvoidPoison": {
+            "AbyssAvoidPoisonJewel1__": 300,
+            "AbyssAvoidPoisonJewel2__": 150
+          },
+          "ChanceToAvoidBleeding": {
+            "AbyssAvoidBleedingJewel1": 300,
+            "AbyssAvoidBleedingJewel2": 150
+          },
+          "AvoidStun": {
+            "AbyssAvoidStunJewel1": 300,
+            "AbyssAvoidStunJewel2": 150
+          },
+          "MinionAttackAndCastSpeed": {
+            "AbyssMinionAttackAndCastSpeedJewel1": 800
+          },
+          "MinionLifeRegeneration": {
+            "AbyssMinionLifeRegenerationJewel1": 800
+          },
+          "MinionLifeLeech": {
+            "AbyssMinionLifeLeechJewel1": 800
+          },
+          "MinionMovementSpeed": {
+            "AbyssMinionMovementSpeedJewel1": 800
+          },
+          "MinionLifeForJewel": {
+            "AbyssMinionLifeJewel1_": 800
+          },
+          "MinionAccuracyRatingFlat": {
+            "AbyssFlatMinionAccuracy1": 300,
+            "AbyssFlatMinionAccuracy2_": 300,
+            "AbyssFlatMinionAccuracy3": 300
+          },
+          "MinionElementalResistancesForJewel": {
+            "AbyssMinionElementalResistancesJewel1": 800
+          },
+          "MinionChaosResistance": {
+            "AbyssMinionChaosResistanceJewel1": 800
+          },
+          "SpellBlockChanceIfHitRecently": {
+            "AbyssSpellBlockChanceIfHitRecentlyJewel1": 250,
+            "AbyssSpellDodgeAndDodgeChanceIfHitRecentlyJewel1": 250
+          },
+          "ReducedPhysicalDamageTakenIfNotHitRecently": {
+            "AbyssReducedPhysicalDamageTakenIfNotHitRecentlyJewel1": 250
+          },
+          "MovementSpeedIfNotDamagedRecently": {
+            "AbyssMovementSpeedIfNotDamagedRecentlyJewel1": 250
+          },
+          "CastSpeedIfMinionKilledRecently": {
+            "AbyssCastSpeedIfMinionKilledRecentlyJewel1": 500
+          },
+          "MinionDamageIfMinionSkillUsedRecently": {
+            "AbyssMinionDamageIfMinionSkillUsedRecentlyJewel1": 500
+          },
+          "EvasionRatingWhileMoving": {
+            "AbyssEvasionRatingWhileMovingJewel1": 250
+          },
+          "ManaRegenerationRateWhileMoving": {
+            "AbyssManaRegenerationRateWhileMovingJewel1": 250
+          },
+          "LifeRegenerationRateWhileMoving": {
+            "AbyssLifeRegenerationRateWhileMovingJewel1": 250
+          },
+          "ChanceToBlockIfDamagedRecently": {
+            "AbyssChanceToBlockIfDamagedRecentlyJewel1_": 250
+          },
+          "EnchantmentConsecratedGround": {
+            "AbyssSelfCurseEffectOnConsecratedGroundJewel1__": 500
+          },
+          "EnchantmentElusive": {
+            "AbyssAvoidElementalAilmentsWhileElusiveJewel1": 100
+          },
+          "EnchantmentHinder": {
+            "AbyssHinderedEnemiesLifeRegenerationRateJewel1": 500
+          },
+          "EnchantmentBlind": {
+            "AbyssBlindedEnemiesCriticalStrikeChanceJewel1": 100
+          },
+          "EnchantmentWither": {
+            "AbyssWitheredEnemiesAllResistanceJewel1___": 500
+          },
+          "EnchantmentMaim": {
+            "AbyssMaimedEnemiesDamageOverTimeJewel1": 100
+          },
+          "EnchantmentIntimidate": {
+            "AbyssIntimidatedEnemiesStunDurationJewel1": 100
+          }
+        },
+        "delve_prefix": {
+          "FireResistancePenetration": {
+            "DelveJewelFirePenetration1": 1000
+          },
+          "ColdResistancePenetration": {
+            "DelveJewelColdPenetration1": 1000
+          },
+          "LightningResistancePenetration": {
+            "DelveJewelLightningPenetration1": 1000
+          },
+          "PhysicalDamageOverTimeTaken": {
+            "DelveJewelPhysicalDamageOverTimeTaken1": 1000
+          },
+          "LifeRegenerationRatePercentage": {
+            "DelveJewelLifeRegeneration1": 1000
+          },
+          "AllDefences": {
+            "DelveJewelGlobalDefences1": 1000
+          },
+          "ElementalPenetration": {
+            "DelveJewelElementalPenetration1": 1600
+          },
+          "MinionDamage": {
+            "DelveAbyssJewelMinionDamage1": 2000
+          }
+        },
+        "delve_suffix": {
+          "IncreasedChaosDamage": {
+            "DelveJewelChaosDamage1": 1000
+          },
+          "PhysicalDamageReductionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelArmourIfYouHitRecently1": 300
+          },
+          "EvasionRatingIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEvasionIfYouHitRecently1": 300
+          },
+          "EnergyShieldRegenerationRatePerMinuteIfYouHaveHitAnEnemyRecently": {
+            "DelveJewelEnergyShieldRegenIfYouHitRecently1_": 300
+          },
+          "AilmentDamage": {
+            "DelveJewelAilmentDamage1__": 1000
+          },
+          "AvoidInterruptionWhileCasting": {
+            "DelveJewelAvoidInterruptionWhileCasting1": 1000
+          },
+          "LifeLeechFromAttacksPermyriad": {
+            "DelveJewelAttackLeech1": 1000
+          },
+          "PercentDamageGoesToMana": {
+            "DelveJewelDamageTakenGainedAsMana1": 1000
+          },
+          "ChanceToGainOnslaughtOnFlaskUse": {
+            "DelveJewelChanceToGainOnslaughtOnFlaskUse1": 1000
+          },
+          "AdditionalVaalSoulOnKill": {
+            "DelveJewelVaalSoulsOnKill1": 2000
+          }
+        }
+      }
+    },
+    "synthesis": {
+      "mods": []
+    }
+  }
+}
