@@ -9,7 +9,7 @@ BASE_ITEMS_PATH = os.path.join(BASE_PATH, "data", "base_items.json")
 MODS_PATH = os.path.join(BASE_PATH, "data", "mods.json")
 MODS_BY_BASE_PATH = os.path.join(BASE_PATH, "data", "mods_by_base.json")
 OUTPUT_PATH = os.path.join(BASE_PATH, "output", "class_base_mods.json")
-MOD_MAP_OUTPUT_PATH = os.path.join(BASE_PATH, "output", "mod_tiers.json")
+# MOD_MAP_OUTPUT_PATH = os.path.join(BASE_PATH, "output", "mod_tiers.json")
 
 def load_json(path):
     with open(path, encoding='utf-8') as f:
@@ -111,11 +111,6 @@ def main():
         json.dump(items_by_class, f, indent=2, ensure_ascii=False)
 
     print(f"✅ Mod map successfully written to: {OUTPUT_PATH}")
-
-    # with open(MOD_MAP_OUTPUT_PATH, "w", encoding="utf-8") as f:
-    #     json.dump(tier_map, f, indent=2, ensure_ascii=False)
-    
-    print(f"✅ Mod map successfully written to: {MOD_MAP_OUTPUT_PATH}")
 
 if __name__ == "__main__":
     main()

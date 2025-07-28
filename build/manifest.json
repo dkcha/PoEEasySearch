@@ -3,17 +3,14 @@
   "name": "Path of Exile Trade Helper",
   "version": "1.0.0",
   "description": "Streamline Path of Exile trading by auto-filling the official trade site with your configured search parameters.",
-  
   "permissions": [
     "activeTab",
     "storage",
     "scripting"
   ],
-  
   "host_permissions": [
     "https://www.pathofexile.com/*"
   ],
-  
   "action": {
     "default_popup": "popup.html",
     "default_title": "PoE Trade Helper",
@@ -24,30 +21,34 @@
       "128": "icons/icon128.png"
     }
   },
-  
   "content_scripts": [
     {
-      "matches": ["https://www.pathofexile.com/trade/search/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://www.pathofexile.com/trade/search/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
-  
   "background": {
     "service_worker": "background.js"
   },
-  
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  
   "web_accessible_resources": [
     {
-      "resources": ["data/*.json"],
-      "matches": ["https://www.pathofexile.com/*"]
+      "resources": [
+        "data/*.json"
+      ],
+      "matches": [
+        "https://www.pathofexile.com/*"
+      ]
     }
   ]
 }
