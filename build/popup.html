@@ -3,494 +3,1030 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PoE Easy Search</title>
+    <title>PoE Trade Helper - Abyss Jewels</title>
     <style>
+        /* Path of Exile themed styling for Abyss Jewels */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* Fixed dimensions to prevent layout shifts */
         body {
             width: 420px;
-            height: 600px;
-            min-height: 600px;
-            max-height: 600px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 500px;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #ffffff;
-            font-size: 13px;
-            overflow: hidden;
+            color: #d4af37;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            overflow-x: hidden;
         }
 
         .header {
-            background: linear-gradient(90deg, #0f3460 0%, #e94560 100%);
-            padding: 16px;
+            background: linear-gradient(90deg, #0f0f23 0%, #16213e 50%, #0f0f23 100%);
+            padding: 15px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(233, 69, 96, 0.3);
+            border-bottom: 2px solid #d4af37;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .header h1 {
+            color: #d4af37;
             font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 4px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
         }
 
         .header .subtitle {
-            font-size: 11px;
-            opacity: 0.9;
+            color: #8b6914;
+            font-size: 12px;
+            margin-top: 4px;
+            font-style: italic;
         }
 
         .container {
-            padding: 16px;
-            height: calc(100vh - 80px);
-            overflow-y: auto;
+            padding: 20px;
         }
 
-        /* Search Type Selection */
-        .search-type {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .section {
+            margin-bottom: 20px;
+            background: rgba(22, 33, 62, 0.3);
+            border: 1px solid rgba(212, 175, 55, 0.2);
             border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
+            padding: 15px;
         }
 
-        .search-type h3 {
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: #e94560;
-        }
-
-        .radio-group {
-            display: flex;
-            gap: 16px;
-        }
-
-        .radio-option {
+        .section-title {
+            color: #d4af37;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 6px;
-            cursor: pointer;
+            gap: 8px;
         }
 
-        .radio-option input[type="radio"] {
-            accent-color: #e94560;
+        .section-title::before {
+            content: "◆";
+            color: #8b6914;
         }
 
-        .radio-option label {
-            cursor: pointer;
-            font-size: 12px;
+        .form-group {
+            margin-bottom: 15px;
         }
 
-        /* Animations - Simplified for stability */
-        .section {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            margin-bottom: 12px;
+        .form-label {
+            display: block;
+            color: #d4af37;
+            font-weight: 500;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .form-select, .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #d4af37;
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+        }
+
+        .form-select option {
+            background: #16213e;
+            color: #ffffff;
+        }
+
+        /* Search Type Toggle */
+        .search-type-toggle {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
             overflow: hidden;
+            border: 1px solid rgba(212, 175, 55, 0.2);
         }
 
-        .section.collapsed .section-content {
+        .toggle-option {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .toggle-option:hover {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .toggle-option.active {
+            background: linear-gradient(135deg, #d4af37 0%, #8b6914 100%);
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Mod Search Section */
+        .mod-search-section {
             display: none;
         }
 
-        .collapsible-header {
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.08);
+        .mod-search-section.active {
+            display: block;
+        }
+
+        .mod-search-container {
+            position: relative;
+        }
+
+        .mod-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(16, 33, 62, 0.95);
+            border: 1px solid #d4af37;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .mod-suggestion {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+            transition: background 0.15s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mod-suggestion:hover,
+        .mod-suggestion.highlighted {
+            background: rgba(212, 175, 55, 0.15);
+        }
+
+        .mod-suggestion:last-child {
+            border-bottom: none;
+        }
+
+        .mod-suggestion-name {
+            color: #ffffff;
+            font-size: 13px;
+        }
+
+        .mod-suggestion-score {
+            color: #8b6914;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .score-excellent { color: #4ade80; }
+        .score-good { color: #fbbf24; }
+        .score-fair { color: #fb7185; }
+
+        /* Selected Mods Display */
+        .selected-mods {
+            margin-top: 15px;
+        }
+
+        .selected-mod {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+        }
+
+        .selected-mod-info {
+            flex: 1;
+        }
+
+        .selected-mod-name {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .selected-mod-values {
+            color: #8b6914;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .remove-mod-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .remove-mod-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+            color: #ffffff;
+        }
+
+        /* Tier Selection Modal */
+        .tier-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .tier-modal.active {
+            display: flex;
+        }
+
+        .tier-modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid #d4af37;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 350px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+
+        .tier-modal-title {
+            color: #d4af37;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .tier-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tier-option {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 6px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tier-option:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: #d4af37;
+        }
+
+        .tier-option.selected {
+            background: linear-gradient(135deg, #d4af37 0%, #8b6914 100%);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .tier-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .tier-values {
+            font-size: 11px;
+            color: #8b6914;
+        }
+
+        .tier-option.selected .tier-values {
+            color: #000;
+        }
+
+        .tier-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #d4af37 0%, #8b6914 100%);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #8b6914 0%, #d4af37 100%);
+        }
+
+        .btn-secondary {
+            background: rgba(107, 114, 128, 0.3);
+            color: #ffffff;
+            border: 1px solid rgba(107, 114, 128, 0.5);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(107, 114, 128, 0.5);
+        }
+
+        .btn-search {
+            width: 100%;
+            background: linear-gradient(135deg, #d4af37 0%, #8b6914 100%);
+            color: #000;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 12px;
+            margin-top: 10px;
+        }
+
+        .btn-search:hover {
+            background: linear-gradient(135deg, #8b6914 0%, #d4af37 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Error Messages */
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Loading State */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 50%;
+            border-top-color: #d4af37;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Collapsible Sections */
+        .collapsible {
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-weight: 500;
         }
 
-        .collapsible-header:hover {
-            background: rgba(255, 255, 255, 0.12);
-        }
-
-        .collapsible-header::after {
-            content: '▼';
-            font-size: 10px;
-        }
-
-        .section.collapsed .collapsible-header::after {
-            content: '▶';
-        }
-
-        .section-content {
-            padding: 16px;
-        }
-
-        .form-group {
-            margin-bottom: 12px;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 4px;
-            font-weight: 500;
-            font-size: 12px;
-            color: #b8c6db;
-        }
-
-        .form-group select,
-        .form-group input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            font-size: 12px;
-        }
-
-        .form-group select:focus,
-        .form-group input:focus {
-            outline: none;
-            border-color: #e94560;
-            box-shadow: 0 0 0 1px rgba(233, 69, 96, 0.3);
-        }
-
-        .form-group select option {
-            background: #1a1a2e;
+        .collapsible:hover {
             color: #ffffff;
         }
 
-        .input-group {
-            display: flex;
-            gap: 8px;
+        .collapse-icon {
+            transition: transform 0.2s ease;
         }
 
-        .input-group input {
-            flex: 1;
+        .collapsible.collapsed .collapse-icon {
+            transform: rotate(-90deg);
         }
 
-        .checkbox-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 8px;
+        .collapsible-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
         }
 
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .collapsible-content.collapsed {
+            max-height: 0;
         }
 
-        .checkbox-item input[type="checkbox"] {
-            width: auto;
-            accent-color: #e94560;
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
         }
 
-        .checkbox-item label {
-            margin: 0;
-            cursor: pointer;
-            font-size: 12px;
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
         }
 
-        /* Mod Management */
-        .mod-controls {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #d4af37 0%, #8b6914 100%);
+            border-radius: 3px;
         }
 
-        .mod-controls button {
-            flex: 1;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background: #e94560;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #d63384;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #b8c6db;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-
-        .mod-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-bottom: 8px;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
-
-        .mod-row.template {
-            display: none;
-        }
-
-        .mod-select {
-            flex: 2;
-        }
-
-        .tier-select {
-            flex: 1;
-        }
-
-        .remove-mod {
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 6px 8px;
-            cursor: pointer;
-            font-size: 11px;
-        }
-
-        .remove-mod:hover {
-            background: #c82333;
-        }
-
-        /* Action Buttons */
-        .actions {
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
-        .action-buttons button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .btn-search {
-            background: linear-gradient(45deg, #e94560, #f27121);
-            color: white;
-            font-size: 14px;
-        }
-
-        .btn-search:hover {
-            box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
-        }
-
-        .btn-reset {
-            background: rgba(255, 255, 255, 0.1);
-            color: #b8c6db;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-reset:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-
-        /* Status Bar */
-        .status {
-            margin-top: 12px;
-            padding: 8px 12px;
-            background: rgba(15, 52, 96, 0.3);
-            border: 1px solid rgba(15, 52, 96, 0.5);
-            border-radius: 4px;
-            font-size: 11px;
-            text-align: center;
-            color: #b8c6db;
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #8b6914 0%, #d4af37 100%);
         }
 
         /* Responsive Design */
         @media (max-width: 480px) {
             body {
-                width: 100vw;
+                width: 100%;
+                min-width: 320px;
             }
             
-            .checkbox-group {
-                grid-template-columns: 1fr;
+            .container {
+                padding: 15px;
             }
             
-            .input-group {
-                flex-direction: column;
+            .tier-options {
+                grid-template-columns: repeat(2, 1fr);
             }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-        }
-
-        /* Scrollbar Styling */
-        .container::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .container::-webkit-scrollbar-thumb {
-            background: rgba(233, 69, 96, 0.5);
-            border-radius: 3px;
-        }
-
-        .container::-webkit-scrollbar-thumb:hover {
-            background: rgba(233, 69, 96, 0.7);
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>PoE Easy Search</h1>
-        <div class="subtitle">Streamlined Path of Exile Trading</div>
+        <h1>PoE Trade Helper</h1>
+        <div class="subtitle">Abyss Jewels Edition</div>
     </div>
 
     <div class="container">
+        <!-- Error Messages -->
+        <div id="errorMessage" class="error-message"></div>
+
+        <!-- Base Item Selection -->
+        <div class="section">
+            <h3 class="section-title">Select Abyss Jewel</h3>
+            <div class="form-group">
+                <label class="form-label" for="baseItemSelect">Jewel Type:</label>
+                <select id="baseItemSelect" class="form-select">
+                    <option value="">Choose an Abyss Jewel...</option>
+                </select>
+            </div>
+        </div>
+
         <!-- Search Type Selection -->
-        <div class="search-type">
-            <h3>Search Type</h3>
-            <div class="radio-group">
-                <div class="radio-option">
-                    <input type="radio" id="searchBaseOnly" name="searchType" value="baseOnly" checked>
-                    <label for="searchBaseOnly">Base Items Only</label>
-                </div>
-                <div class="radio-option">
-                    <input type="radio" id="searchWithMods" name="searchType" value="withMods">
-                    <label for="searchWithMods">With Specific Mods</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Base Item Section -->
         <div class="section">
-            <div class="collapsible-header">Base Item</div>
-            <div class="section-content">
-                <div class="form-group">
-                    <label for="baseItem">Item Type</label>
-                    <select id="baseItem">
-                        <option value="">Loading items...</option>
-                    </select>
-                </div>
+            <h3 class="section-title">Search Type</h3>
+            <div class="search-type-toggle">
+                <div class="toggle-option active" data-type="base">Base Items Only</div>
+                <div class="toggle-option" data-type="mods">With Specific Mods</div>
             </div>
         </div>
 
-        <!-- Item Properties Section -->
+        <!-- Mod Search Section -->
+        <div id="modSearchSection" class="section mod-search-section">
+            <h3 class="section-title">Search for Mods</h3>
+            <div class="form-group">
+                <label class="form-label" for="modSearchInput">Mod Search (e.g., "life", "es", "fire res"):</label>
+                <div class="mod-search-container">
+                    <input 
+                        type="text" 
+                        id="modSearchInput" 
+                        class="form-input" 
+                        placeholder="Type to search for mods..."
+                        disabled
+                    >
+                    <div id="modSuggestions" class="mod-suggestions"></div>
+                </div>
+            </div>
+
+            <div id="selectedMods" class="selected-mods">
+                <div class="form-label">Selected Mods:</div>
+                <div id="selectedModsList"></div>
+            </div>
+        </div>
+
+        <!-- Advanced Options (Collapsible) -->
         <div class="section">
-            <div class="collapsible-header">Item Properties</div>
-            <div class="section-content">
+            <h3 class="section-title collapsible collapsed" id="advancedToggle">
+                Advanced Options
+                <span class="collapse-icon">▼</span>
+            </h3>
+            <div id="advancedContent" class="collapsible-content collapsed">
                 <div class="form-group">
-                    <label>Item Level</label>
-                    <div class="input-group">
-                        <input type="number" id="itemLevelMin" placeholder="Min" min="1" max="100">
-                        <input type="number" id="itemLevelMax" placeholder="Max" min="1" max="100">
+                    <label class="form-label" for="itemLevel">Item Level:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="itemLevelMin" class="form-input" placeholder="Min" style="flex: 1;">
+                        <input type="number" id="itemLevelMax" class="form-input" placeholder="Max" style="flex: 1;">
                     </div>
                 </div>
-
                 <div class="form-group">
-                    <label>Quality</label>
-                    <div class="input-group">
-                        <input type="number" id="qualityMin" placeholder="Min %" min="0" max="30">
-                        <input type="number" id="qualityMax" placeholder="Max %" min="0" max="30">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Special Properties</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="corrupted">
-                            <label for="corrupted">Corrupted</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="fractured">
-                            <label for="fractured">Fractured</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="synthesised">
-                            <label for="synthesised">Synthesised</label>
-                        </div>
+                    <label class="form-label" for="priceRange">Price Range (Chaos Orbs):</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="priceMin" class="form-input" placeholder="Min" style="flex: 1;">
+                        <input type="number" id="priceMax" class="form-input" placeholder="Max" style="flex: 1;">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Mods Section (Hidden for base-only searches) -->
-        <div class="section mods">
-            <div class="collapsible-header">Mods & Affixes</div>
-            <div class="section-content">
-                <div class="mod-controls">
-                    <button id="addMod" class="btn-primary">Add Mod</button>
-                    <button id="clearMods" class="btn-secondary">Clear All</button>
-                </div>
-
-                <div id="modContainer">
-                    <div class="mod-row template">
-                        <select class="mod-select">
-                            <option value="">Select mod...</option>
-                        </select>
-                        <select class="tier-select">
-                            <option value="">Select tier...</option>
-                        </select>
-                        <button class="remove-mod">×</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Price Section -->
+        <!-- Search Buttons -->
         <div class="section">
-            <div class="collapsible-header">Price Range</div>
-            <div class="section-content">
-                <div class="form-group">
-                    <label>Price</label>
-                    <div class="form-row">
-                        <input type="number" id="priceMin" placeholder="Min" min="0" step="0.1">
-                        <input type="number" id="priceMax" placeholder="Max" min="0" step="0.1">
-                        <select id="priceCurrency">
-                            <option value="chaos">Chaos</option>
-                            <option value="divine">Divine</option>
-                            <option value="exalted">Exalted</option>
-                            <option value="mirror">Mirror</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="actions">
-            <div class="action-buttons">
-                <button id="searchTrade" class="btn-search">Search Base Items</button>
-                <button id="resetConfig" class="btn-reset">Reset</button>
-            </div>
-            <div id="status" class="status">🔄 Loading data...</div>
+            <button id="searchBaseBtn" class="btn btn-search">Search Base Items</button>
+            <button id="searchModsBtn" class="btn btn-search" style="display: none;">Search with Mods</button>
         </div>
     </div>
 
-    <script src="data-processor.js"></script>
-    <script src="popup.js"></script>
+    <!-- Tier Selection Modal -->
+    <div id="tierModal" class="tier-modal">
+        <div class="tier-modal-content">
+            <h3 class="tier-modal-title">Select Tier</h3>
+            <div id="tierOptions" class="tier-options"></div>
+            <div class="tier-modal-buttons">
+                <button id="confirmTierBtn" class="btn btn-primary">Add Mod</button>
+                <button id="cancelTierBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="abyss-data-processor.js"></script>
+    <script>
+        // Initialize the popup controller when DOM is loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const controller = new AbyssJewelPopupController();
+                await controller.initialize();
+                window.abyssController = controller; // For debugging
+                
+                // Enable testing in console
+                window.runTests = async () => {
+                    const tester = new AbyssJewelFuzzySearchTest();
+                    return await tester.runAllTests();
+                };
+                
+                console.log('✅ Abyss Jewel Trade Helper initialized successfully');
+                console.log('💡 Type "runTests()" in console to run integration tests');
+            } catch (error) {
+                console.error('❌ Failed to initialize popup:', error);
+                document.getElementById('errorMessage').textContent = 'Failed to load data. Please refresh the extension.';
+                document.getElementById('errorMessage').classList.add('show');
+            }
+        });
+
+        // Popup Controller Class
+        class AbyssJewelPopupController {
+            constructor() {
+                this.processor = new AbyssJewelDataProcessor();
+                this.searchConfig = {
+                    baseItem: null,
+                    searchType: 'base',
+                    selectedMods: [],
+                    itemLevel: { min: null, max: null },
+                    price: { min: null, max: null }
+                };
+                this.currentSuggestionIndex = -1;
+                this.currentTierSelection = null;
+            }
+
+            async initialize() {
+                await this.processor.initialize();
+                this.setupEventListeners();
+                this.populateBaseItems();
+            }
+
+            setupEventListeners() {
+                // Base item selection
+                document.getElementById('baseItemSelect').addEventListener('change', (e) => {
+                    this.searchConfig.baseItem = e.target.value;
+                    this.updateModSearchState();
+                });
+
+                // Search type toggle
+                document.querySelectorAll('.toggle-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        this.switchSearchType(e.target.dataset.type);
+                    });
+                });
+
+                // Mod search input
+                const modInput = document.getElementById('modSearchInput');
+                modInput.addEventListener('input', (e) => {
+                    this.onModSearchInput(e.target.value);
+                });
+                modInput.addEventListener('keydown', (e) => {
+                    this.handleModSearchKeydown(e);
+                });
+
+                // Advanced options toggle
+                document.getElementById('advancedToggle').addEventListener('click', () => {
+                    this.toggleAdvancedOptions();
+                });
+
+                // Search buttons
+                document.getElementById('searchBaseBtn').addEventListener('click', () => {
+                    this.performBaseSearch();
+                });
+                document.getElementById('searchModsBtn').addEventListener('click', () => {
+                    this.performModSearch();
+                });
+
+                // Tier modal
+                document.getElementById('confirmTierBtn').addEventListener('click', () => {
+                    this.confirmTierSelection();
+                });
+                document.getElementById('cancelTierBtn').addEventListener('click', () => {
+                    this.closeTierModal();
+                });
+
+                // Close suggestions when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.mod-search-container')) {
+                        this.hideSuggestions();
+                    }
+                });
+            }
+
+            populateBaseItems() {
+                const baseItems = this.processor.getBaseItems();
+                const select = document.getElementById('baseItemSelect');
+                
+                Object.entries(baseItems).forEach(([key, item]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = item.name;
+                    select.appendChild(option);
+                });
+            }
+
+            switchSearchType(type) {
+                this.searchConfig.searchType = type;
+                
+                // Update toggle buttons
+                document.querySelectorAll('.toggle-option').forEach(option => {
+                    option.classList.toggle('active', option.dataset.type === type);
+                });
+
+                // Show/hide sections
+                const modSection = document.getElementById('modSearchSection');
+                const baseBtn = document.getElementById('searchBaseBtn');
+                const modBtn = document.getElementById('searchModsBtn');
+
+                if (type === 'mods') {
+                    modSection.classList.add('active');
+                    baseBtn.style.display = 'none';
+                    modBtn.style.display = 'block';
+                } else {
+                    modSection.classList.remove('active');
+                    baseBtn.style.display = 'block';
+                    modBtn.style.display = 'none';
+                }
+
+                this.updateModSearchState();
+            }
+
+            updateModSearchState() {
+                const modInput = document.getElementById('modSearchInput');
+                const hasBaseItem = this.searchConfig.baseItem;
+                const isModSearch = this.searchConfig.searchType === 'mods';
+                
+                modInput.disabled = !hasBaseItem || !isModSearch;
+                
+                if (!hasBaseItem && isModSearch) {
+                    this.showError('Please select an Abyss Jewel first');
+                } else {
+                    this.hideError();
+                }
+            }
+
+            onModSearchInput(query) {
+                if (!query || query.length < 2) {
+                    this.hideSuggestions();
+                    return;
+                }
+
+                const results = this.processor.findMatchingMods(
+                    this.searchConfig.baseItem, 
+                    query, 
+                    8
+                );
+
+                this.displaySuggestions(results);
+                this.currentSuggestionIndex = -1;
+            }
+
+            displaySuggestions(results) {
+                const container = document.getElementById('modSuggestions');
+                
+                if (results.length === 0) {
+                    this.hideSuggestions();
+                    return;
+                }
+
+                container.innerHTML = '';
+                container.style.display = 'block';
+
+                results.forEach((result, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'mod-suggestion';
+                    div.dataset.index = index;
+                    
+                    const scoreClass = result.score >= 90 ? 'score-excellent' : 
+                                     result.score >= 70 ? 'score-good' : 'score-fair';
+                    
+                    div.innerHTML = `
+                        <span class="mod-suggestion-name">${result.displayName}</span>
+                        <span class="mod-suggestion-score ${scoreClass}">${result.score}%</span>
+                    `;
+                    
+                    div.addEventListener('click', () => {
+                        this.selectModSuggestion(result);
+                    });
+                    
+                    container.appendChild(div);
+                });
+            }
+
+            handleModSearchKeydown(e) {
+                const suggestions = document.querySelectorAll('.mod-suggestion');
+                
+                if (suggestions.length === 0) return;
+
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.currentSuggestionIndex = Math.min(
+                            this.currentSuggestionIndex + 1, 
+                            suggestions.length - 1
+                        );
+                        this.highlightSuggestion();
+                        break;
+                        
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.currentSuggestionIndex = Math.max(
+                            this.currentSuggestionIndex - 1, 
+                            0
+                        );
+                        this.highlightSuggestion();
+                        break;
+                        
+                    case 'Enter':
+                        e.preventDefault();
+                        if (this.currentSuggestionIndex >= 0) {
+                            const selectedSuggestion = suggestions[this.currentSuggestionIndex];
+                            // Get the mod data from the suggestion
+                            const modInput = document.getElementById('modSearchInput');
+                            const query = modInput.value;
+                            const results = this.processor.findMatchingMods(
+                                this.searchConfig.baseItem, 
+                                query, 
+                                8
+                            );
+                            if (results[this.currentSuggestionIndex]) {
+                                this.selectModSuggestion(results[this.currentSuggestionIndex]);
+                            }
+                        }
+                        break;
+                        
+                    case 'Escape':
+                        this.hideSuggestions();
+                        break;
+                }
+            }
+
+            highlightSuggestion() {
+                const suggestions = document.querySelectorAll('.mod-suggestion');
+                suggestions.forEach((suggestion, index) => {
+                    suggestion.classList.toggle(
+                        'highlighted', 
+                        index === this.currentSuggestionIndex
+                    );
+                });
+            }
+
+            selectModSuggestion(modData) {
+                this.currentTierSelection = modData;
+                this.showTierSelection(modData);
+                this.hideSuggestions();
+                document.getElementById('modSearchInput').value = '';
+            }
+
+            showTierSelection(modData) {
+                const modal = document.getElementById('tierModal');
+                const options = document.getElementById('tierOptions');
+                const title = document.querySelector('.tier-modal-title');
+                
+                title.textContent = `Select Tier for ${modData.displayName}`;
+                
+                const tiers = this.processor.getAvailableTiers(
+                    modData.modKey, 
+                    this.searchConfig.baseItem
+                );
+                
+                options.innerHTML = '';
+                
+                tiers.forEach(tier => {
+                    const div = document.createElement('div');
+                    div.className = 'tier-option';
+                    div.dataset.tierKey = tier.tierKey;
+                    
+                    const values = this.processor.convertTierToValues(
+                        modData.modKey,
+                        this.searchConfig.baseItem,
+                        tier.tierKey
+                    );
+                    
+                    div.innerHTML = `
+                        <div class="tier-name">${tier.displayName}</div>
+                        <div class="tier-values">${values.min}-${values.max}</div>
+                    `;
+                    
+                    div.addEventListener('click', () => {
+                        document.querySelectorAll('.tier-option').forEach(opt => 
+                            opt.classList.remove('selected')
+                        );
+                        div.classList.add('selected');
+                    });
+                    
+                    options.appendChild(div);
+                });
+                
+                modal.classList.add('active');
+            }
+
+            confirmTierSelection() {
+                const selectedTier = document.querySelector('.tier-option.selected');
+                
+                if (!selectedTier || !this.currentTierSelection) {
+                    this.showError('Please select a tier');
+                    return;
+                }
+                
+                const tierKey = selectedTier.dataset.tierKey;
+                const values = this.processor.convertTierToValues(
+                    this.currentTierSelection.modKey,
+                    this.searchConfig.baseItem,
+                    tierKey
+                );
+                
+                const modEntry = {
+                    modKey: this.currentTierSelection.modKey,
+                    displayName: this.currentTierSelection.displayName,
+                    tier: values.tier,
+                    values: values
+                };
+                
+                this.addSelectedMod(modEntry);
+                this.closeTierModal();
+            }
+
+            addSelectedMod(modEntry) {
+                // Check if mod already exists
+                const existingIndex = this.searchConfig.selectedMods.findIndex(
+                    mod => mod.modKey === modEntry.modKey
+                );
+                
+                if (existingIndex >= 0) {
+                    this.searchConfig.selectedMods[existingIndex] = modEntry;
+                } else {
+                    this.searchConfig.selectedMods.push(modEntry);
+                }
+                
+                this.updateSelectedModsDisplay();
+            }
+
+            updateSelectedModsDisplay() {
+                const container = document.getElementById('selectedModsList');
+                
+                if (this.searchConfig.selectedMods.length === 0) {
+                    container.innerHTML = '<div style="color: #6b7280; font-style: italic;">No mods selected</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                
+                this.searchConfig.selectedMods.forEach((mod, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'selected-mod';
+                    
+                    div.innerHTML = `
+                        <div class="selected-mod-info">
+                            <div class="selected-mod-name">${mod.displayName}</div>
+                            <div class="selected-mod-values">${mod.tier}: ${mod.values.min}-${mod.values.max}</div>
+                        </div>
+                        <button class="remove-mod-btn" data-index="${index}">Remove</button>
+                    `;
+                    
+                    div.querySelector('.remove-mod-btn').addEventListener('click', () => {
+                        this.removeSelectedMod(index);
+                    });
+                    
+                    container.appendChild(div);
+                });
+            }
+
+            removeSelectedMod(index) {
+                this.searchConfig.selectedMods.splice(index, 1);
+                this.updateSelectedModsDisplay();
+            }
+
+            closeTierModal() {
+                document.getElementById('tierModal').classList.remove('active');
+                this.currentTierSelection = null;
+            }
+
+            hideSuggestions() {
+                document.getElementById('modSuggestions').style.display = 'none';
+                this.currentSuggestionIndex = -1;
+            }
+
+            toggleAdvancedOptions() {
+                const toggle = document.getElementById('advancedToggle');
+                const content = document.getElementById('advancedContent');
+                
+                const isCollapsed = toggle.classList.contains('collapsed');
+                
+                toggle.classList.toggle('collapsed');
+                content.classList.toggle('collapsed');
+                
+                // Animate content
+                if (isCollapsed) {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                } else {
+                    content.style.maxHeight = '0';
+                }
+            }
+
+            performBaseSearch() {
+                if (!this.searchConfig.baseItem) {
+                    this.showError('Please select an Abyss Jewel');
+                    return;
+                }
+                
+                const config = { ...this.searchConfig };
+                config.selectedMods = []; // Base search doesn't use mods
+                
+                const url = this.processor.generateTradeUrlWithMods(config);
+                this.openTradeUrl(url);
+            }
+
+            performModSearch() {
+                if (!this.searchConfig.baseItem) {
+                    this.showError('Please select an Abyss Jewel');
+                    return;
+                }
+                
+                if (this.searchConfig.selectedMods.length === 0) {
+                    this.showError('Please add at least one mod to search for');
+                    return;
+                }
+                
+                const url = this.processor.generateTradeUrlWithMods(this.searchConfig);
+                this.openTradeUrl(url);
+            }
+
+            openTradeUrl(url) {
+                chrome.tabs.create({ url: url });
+                window.close();
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = message;
+                errorDiv.classList.add('show');
+                
+                setTimeout(() => {
+                    this.hideError();
+                }, 5000);
+            }
+
+            hideError() {
+                document.getElementById('errorMessage').classList.remove('show');
+            }
+        }
+    </script>
 </body>
 </html>

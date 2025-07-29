@@ -1,404 +1,438 @@
-// Content script for Path of Exile trade site auto-fill
-(function () {
-  "use strict";
+/**
+ * Content Script for PoE Trade Helper - Abyss Jewels
+ * Handles auto-filling the pathofexile.com/trade website forms
+ */
 
-  // Trade site field selectors (these may need to be updated based on actual site structure)
-  const SELECTORS = {
-    // Base item search
-    itemName: 'input[placeholder="Enter name or base"]',
-    itemNameSuggestion: ".search-suggestion-item",
+class PoETradeAutoFiller {
+    constructor() {
+        this.tradeUrl = 'https://www.pathofexile.com/trade';
+        this.initialized = false;
+        this.selectors = {
+            // Base item type selection
+            typeInput: 'input[placeholder*="type"]',
+            typeDropdown: '.search-advanced-items',
+            
+            // Stat/mod filters
+            statGroupAdd: '.search-advanced-add',
+            statFilterInput: 'input[placeholder*="And"]',
+            statMinInput: 'input[placeholder*="Min"]',
+            statMaxInput: 'input[placeholder*="Max"]',
+            
+            // Item level filters
+            itemLevelMin: 'input[data-field="ilvl.min"]',
+            itemLevelMax: 'input[data-field="ilvl.max"]',
+            
+            // Price filters
+            priceMin: 'input[data-field="price.min"]',
+            priceMax: 'input[data-field="price.max"]',
+            
+            // Search button
+            searchButton: '.btn-search'
+        };
+    }
 
-    // Item filters
-    itemLevelMin: 'input[placeholder="Min"]',
-    itemLevelMax: 'input[placeholder="Max"]',
-    qualityMin: 'input[data-field="q.min"]',
-    qualityMax: 'input[data-field="q.max"]',
+    initialize() {
+        if (this.initialized) return;
+        
+        console.log('🔧 Initializing PoE Trade Auto-Filler for Abyss Jewels...');
+        
+        // Check if we're on the trade site
+        if (!window.location.href.includes(this.tradeUrl)) {
+            return;
+        }
+        
+        this.setupMessageListener();
+        this.waitForPageLoad();
+        
+        this.initialized = true;
+        console.log('✅ Auto-filler initialized successfully');
+    }
 
-    // Checkboxes
-    corrupted: 'input[data-field="corrupted"]',
-    fractured: 'input[data-field="fractured"]',
-    synthesised: 'input[data-field="synthesised"]',
-
-    // Stats section
-    statsContainer: ".search-advanced-items",
-    addStatButton: ".search-advanced-add",
-    statDropdown: ".search-select-dropdown",
-    statInput: 'input[placeholder="Enter stat here"]',
-    statMinValue: 'input[data-field="stat.min"]',
-    statMaxValue: 'input[data-field="stat.max"]',
-
-    // Price filters
-    priceContainer: ".price-filter",
-    priceMin: 'input[data-field="price.min"]',
-    priceMax: 'input[data-field="price.max"]',
-    priceCurrency: 'select[data-field="price.currency"]',
-
-    // Search button
-    searchButton: ".btn-search",
-    searchSubmit: 'button[type="submit"]',
-  };
-
-  // Mod name mappings from extension format to trade site format
-  const MOD_NAME_MAPPINGS = {
-    energy_shield_flat: "+# to maximum Energy Shield",
-    energy_shield_percent: "#% increased Energy Shield",
-    life_flat: "+# to maximum Life",
-    resistances_all: "+#% to all Resistances",
-    melee_damage: "#% increased Melee Damage",
-    added_life_jewel: "+# to maximum Life",
-    attack_speed: "#% increased Attack Speed",
-    damage_percent: "#% increased Damage",
-    life_percent: "#% increased maximum Life",
-  };
-
-  // Tier value mappings (will be populated from RePoE data)
-  const TIER_VALUES = {
-    energy_shield_flat: {
-      T1: { min: 80, max: 89 },
-      T2: { min: 70, max: 79 },
-      T3: { min: 60, max: 69 },
-      T4: { min: 50, max: 59 },
-      T5: { min: 40, max: 49 },
-    },
-    life_flat: {
-      T1: { min: 90, max: 99 },
-      T2: { min: 80, max: 89 },
-      T3: { min: 70, max: 79 },
-      T4: { min: 60, max: 69 },
-      T5: { min: 50, max: 59 },
-    },
-    energy_shield_percent: {
-      T1: { min: 18, max: 20 },
-      T2: { min: 15, max: 17 },
-      T3: { min: 12, max: 14 },
-      T4: { min: 9, max: 11 },
-      T5: { min: 6, max: 8 },
-    },
-  };
-
-  // Main message listener
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "fillTradeForm") {
-      fillTradeForm(request.configuration)
-        .then((result) => sendResponse({ success: true, result }))
-        .catch((error) => {
-          console.error("Auto-fill error:", error);
-          sendResponse({ success: false, error: error.message });
+    setupMessageListener() {
+        // Listen for messages from the popup
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.type === 'FILL_TRADE_FORM') {
+                this.fillTradeForm(message.data)
+                    .then(() => sendResponse({ success: true }))
+                    .catch(error => {
+                        console.error('❌ Failed to fill trade form:', error);
+                        sendResponse({ success: false, error: error.message });
+                    });
+                return true; // Keep message channel open for async response
+            }
         });
-      return true; // Keep message channel open for async response
     }
-  });
 
-  // Main function to fill the trade form
-  async function fillTradeForm(config) {
-    console.log("Starting trade form auto-fill with config:", config);
-
-    try {
-      // Wait for page to be ready
-      await waitForElement("body");
-
-      // Clear existing search first
-      await clearExistingSearch();
-
-      // Fill base item
-      if (config.baseItem) {
-        await fillBaseItem(config.baseItem);
-      }
-
-      // Fill item properties
-      await fillItemProperties(config);
-
-      // Fill mods
-      if (config.mods && config.mods.length > 0) {
-        await fillMods(config.mods);
-      }
-
-      // Fill price range
-      if (config.price && (config.price.min || config.price.max)) {
-        await fillPriceRange(config.price);
-      }
-
-      // Optional: Auto-submit the search
-      // await submitSearch();
-
-      return { message: "Form filled successfully" };
-    } catch (error) {
-      console.error("Error filling trade form:", error);
-      throw error;
+    waitForPageLoad() {
+        // Wait for the trade site to fully load
+        const checkInterval = setInterval(() => {
+            const typeInput = document.querySelector(this.selectors.typeInput);
+            if (typeInput) {
+                clearInterval(checkInterval);
+                console.log('📄 Trade site loaded, ready for auto-fill');
+            }
+        }, 500);
+        
+        // Stop checking after 10 seconds
+        setTimeout(() => clearInterval(checkInterval), 10000);
     }
-  }
 
-  // Utility function to wait for elements
-  function waitForElement(selector, timeout = 5000) {
-    return new Promise((resolve, reject) => {
-      const element = document.querySelector(selector);
-      if (element) {
-        resolve(element);
-        return;
-      }
-
-      const observer = new MutationObserver((mutations, obs) => {
-        const element = document.querySelector(selector);
-        if (element) {
-          obs.disconnect();
-          resolve(element);
+    async fillTradeForm(searchConfig) {
+        console.log('📝 Filling trade form with config:', searchConfig);
+        
+        try {
+            // Reset form first
+            await this.resetForm();
+            
+            // Fill base item type
+            if (searchConfig.baseItem) {
+                await this.fillBaseItemType(searchConfig.baseItem);
+            }
+            
+            // Fill item level if specified
+            if (searchConfig.itemLevel) {
+                await this.fillItemLevel(searchConfig.itemLevel);
+            }
+            
+            // Fill mod filters
+            if (searchConfig.selectedMods && searchConfig.selectedMods.length > 0) {
+                await this.fillModFilters(searchConfig.selectedMods);
+            }
+            
+            // Fill price range if specified
+            if (searchConfig.price) {
+                await this.fillPriceRange(searchConfig.price);
+            }
+            
+            console.log('✅ Trade form filled successfully');
+            
+        } catch (error) {
+            console.error('❌ Error filling trade form:', error);
+            throw error;
         }
-      });
+    }
 
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-      });
+    async resetForm() {
+        // Clear existing filters by clicking reset if available
+        const resetButton = document.querySelector('.btn-reset, [data-action="reset"]');
+        if (resetButton) {
+            resetButton.click();
+            await this.wait(500);
+        }
+    }
 
-      setTimeout(() => {
-        observer.disconnect();
-        reject(new Error(`Element ${selector} not found within ${timeout}ms`));
-      }, timeout);
+    async fillBaseItemType(baseItemKey) {
+        console.log('🎯 Setting base item type:', baseItemKey);
+        
+        const typeInput = document.querySelector(this.selectors.typeInput);
+        if (!typeInput) {
+            throw new Error('Type input field not found');
+        }
+        
+        // Map base item keys to display names
+        const baseItemNames = {
+            'Metadata/Items/Jewels/JewelAbyssMelee': 'Murderous Eye Jewel',
+            'Metadata/Items/Jewels/JewelAbyssRanged': 'Searching Eye Jewel',
+            'Metadata/Items/Jewels/JewelAbyssCaster': 'Hypnotic Eye Jewel',
+            'Metadata/Items/Jewels/JewelAbyssSummoner': 'Ghastly Eye Jewel'
+        };
+        
+        const itemName = baseItemNames[baseItemKey];
+        if (!itemName) {
+            throw new Error(`Unknown base item: ${baseItemKey}`);
+        }
+        
+        // Focus and clear the input
+        typeInput.focus();
+        typeInput.value = '';
+        
+        // Type the item name
+        await this.typeText(typeInput, itemName);
+        await this.wait(300);
+        
+        // Look for dropdown and select the item
+        await this.selectFromDropdown(itemName);
+    }
+
+    async selectFromDropdown(itemName) {
+        // Wait for dropdown to appear
+        await this.wait(200);
+        
+        const dropdownOptions = document.querySelectorAll('.dropdown-menu .dropdown-item, .search-advanced-items .item');
+        
+        for (const option of dropdownOptions) {
+            if (option.textContent.trim().includes(itemName)) {
+                option.click();
+                await this.wait(300);
+                return;
+            }
+        }
+        
+        // If exact match not found, try pressing Enter
+        const typeInput = document.querySelector(this.selectors.typeInput);
+        if (typeInput) {
+            typeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+            await this.wait(300);
+        }
+    }
+
+    async fillItemLevel(itemLevel) {
+        console.log('📊 Setting item level range:', itemLevel);
+        
+        if (itemLevel.min) {
+            const minInput = document.querySelector(this.selectors.itemLevelMin);
+            if (minInput) {
+                await this.fillInput(minInput, itemLevel.min.toString());
+            }
+        }
+        
+        if (itemLevel.max) {
+            const maxInput = document.querySelector(this.selectors.itemLevelMax);
+            if (maxInput) {
+                await this.fillInput(maxInput, itemLevel.max.toString());
+            }
+        }
+    }
+
+    async fillModFilters(selectedMods) {
+        console.log('🔮 Adding mod filters:', selectedMods.length);
+        
+        for (let i = 0; i < selectedMods.length; i++) {
+            const mod = selectedMods[i];
+            await this.addModFilter(mod, i);
+            await this.wait(500); // Give time between adding filters
+        }
+    }
+
+    async addModFilter(mod, index) {
+        console.log(`📋 Adding mod filter ${index + 1}:`, mod.displayName);
+        
+        // Click "Add" button to add a new stat filter
+        const addButton = document.querySelector(this.selectors.statGroupAdd);
+        if (!addButton) {
+            throw new Error('Could not find stat group add button');
+        }
+        
+        addButton.click();
+        await this.wait(500);
+        
+        // Find the newly added stat filter inputs
+        const statGroups = document.querySelectorAll('.search-advanced-stat');
+        const currentGroup = statGroups[statGroups.length - 1]; // Get the last added group
+        
+        if (!currentGroup) {
+            throw new Error('Could not find stat group after adding');
+        }
+        
+        // Fill the stat search input
+        const statInput = currentGroup.querySelector('input[placeholder*="And"], .search-stat-input');
+        if (statInput) {
+            await this.typeText(statInput, mod.displayName);
+            await this.wait(300);
+            
+            // Try to select from dropdown
+            await this.selectStatFromDropdown(mod.displayName, currentGroup);
+        }
+        
+        // Fill min/max values if available
+        if (mod.values) {
+            const minInput = currentGroup.querySelector('input[placeholder*="Min"]');
+            const maxInput = currentGroup.querySelector('input[placeholder*="Max"]');
+            
+            if (minInput && mod.values.min !== null) {
+                await this.fillInput(minInput, mod.values.min.toString());
+            }
+            
+            if (maxInput && mod.values.max !== null) {
+                await this.fillInput(maxInput, mod.values.max.toString());
+            }
+        }
+    }
+
+    async selectStatFromDropdown(statName, container) {
+        await this.wait(200);
+        
+        const dropdownOptions = container.querySelectorAll('.dropdown-menu .dropdown-item, .stat-dropdown .stat-option');
+        
+        for (const option of dropdownOptions) {
+            const optionText = option.textContent.trim().toLowerCase();
+            const searchText = statName.toLowerCase();
+            
+            if (optionText.includes(searchText) || searchText.includes(optionText)) {
+                option.click();
+                await this.wait(300);
+                return;
+            }
+        }
+        
+        // If no dropdown match, try pressing Enter
+        const statInput = container.querySelector('input[placeholder*="And"], .search-stat-input');
+        if (statInput) {
+            statInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+            await this.wait(300);
+        }
+    }
+
+    async fillPriceRange(price) {
+        console.log('💰 Setting price range:', price);
+        
+        if (price.min) {
+            const minInput = document.querySelector(this.selectors.priceMin);
+            if (minInput) {
+                await this.fillInput(minInput, price.min.toString());
+            }
+        }
+        
+        if (price.max) {
+            const maxInput = document.querySelector(this.selectors.priceMax);
+            if (maxInput) {
+                await this.fillInput(maxInput, price.max.toString());
+            }
+        }
+    }
+
+    async fillInput(input, value) {
+        if (!input) return;
+        
+        input.focus();
+        input.select();
+        input.value = value;
+        
+        // Trigger input events
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        await this.wait(100);
+    }
+
+    async typeText(input, text) {
+        if (!input) return;
+        
+        input.focus();
+        input.value = '';
+        
+        // Type character by character for better compatibility
+        for (let i = 0; i < text.length; i++) {
+            input.value += text[i];
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            await this.wait(50);
+        }
+        
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Utility method to check if element is visible and interactable
+    isElementInteractable(element) {
+        if (!element) return false;
+        
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        
+        return (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.visibility !== 'hidden' &&
+            style.display !== 'none' &&
+            !element.disabled
+        );
+    }
+
+    // Debug method to log current page state
+    debugPageState() {
+        console.log('🔍 Debug: Current page state');
+        console.log('URL:', window.location.href);
+        console.log('Type input found:', !!document.querySelector(this.selectors.typeInput));
+        console.log('Add button found:', !!document.querySelector(this.selectors.statGroupAdd));
+        console.log('Search button found:', !!document.querySelector(this.selectors.searchButton));
+    }
+}
+
+// Enhanced error handling and communication with popup
+class TradeFormCommunicator {
+    constructor(autoFiller) {
+        this.autoFiller = autoFiller;
+        this.setupAdvancedMessageHandling();
+    }
+
+    setupAdvancedMessageHandling() {
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            switch (message.type) {
+                case 'CHECK_TRADE_SITE_STATUS':
+                    sendResponse({
+                        isTradesite: window.location.href.includes('pathofexile.com/trade'),
+                        ready: this.autoFiller.initialized
+                    });
+                    break;
+                    
+                case 'DEBUG_PAGE_STATE':
+                    this.autoFiller.debugPageState();
+                    sendResponse({ success: true });
+                    break;
+                    
+                case 'TEST_AUTO_FILL':
+                    this.testAutoFill()
+                        .then(result => sendResponse(result))
+                        .catch(error => sendResponse({ success: false, error: error.message }));
+                    return true;
+                    
+                default:
+                    // Let the autoFiller handle other messages
+                    break;
+            }
+        });
+    }
+
+    async testAutoFill() {
+        console.log('🧪 Testing auto-fill functionality...');
+        
+        const testConfig = {
+            baseItem: 'Metadata/Items/Jewels/JewelAbyssMelee',
+            selectedMods: [{
+                displayName: 'Life',
+                values: { min: 30, max: 50 }
+            }],
+            itemLevel: { min: 1, max: 100 }
+        };
+        
+        try {
+            await this.autoFiller.fillTradeForm(testConfig);
+            return { success: true, message: 'Auto-fill test completed successfully' };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+}
+
+// Initialize when the script loads
+const autoFiller = new PoETradeAutoFiller();
+const communicator = new TradeFormCommunicator(autoFiller);
+
+// Initialize immediately
+autoFiller.initialize();
+
+// Also initialize when DOM is ready (backup)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        autoFiller.initialize();
     });
-  }
+} else {
+    autoFiller.initialize();
+}
 
-  // Clear existing search parameters
-  async function clearExistingSearch() {
-    // Look for clear/reset button
-    const clearButton = document.querySelector(
-      '[data-clear="true"], .btn-clear, .search-clear'
-    );
-    if (clearButton) {
-      clearButton.click();
-      await sleep(500);
+// Re-initialize on navigation (for SPA behavior)
+let lastUrl = window.location.href;
+new MutationObserver(() => {
+    const currentUrl = window.location.href;
+    if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        setTimeout(() => {
+            autoFiller.initialize();
+        }, 1000);
     }
-  }
+}).observe(document, { subtree: true, childList: true });
 
-  // Fill base item selection
-  async function fillBaseItem(baseItemId) {
-    const itemNameInput = await waitForElement(SELECTORS.itemName, 3000);
-
-    // Map base item ID to display name
-    const baseItemNames = {
-      "twilight-regalia": "Twilight Regalia",
-      "abyss-jewel-melee": "Abyss Jewel",
-      "cobalt-jewel": "Cobalt Jewel",
-      "searching-eye-jewel": "Searching Eye Jewel",
-    };
-
-    const itemName = baseItemNames[baseItemId] || baseItemId;
-
-    // Clear and type item name
-    itemNameInput.value = "";
-    itemNameInput.focus();
-    await typeText(itemNameInput, itemName);
-
-    // Wait for and select from dropdown suggestions
-    await sleep(1000);
-    const suggestion = document.querySelector(SELECTORS.itemNameSuggestion);
-    if (suggestion) {
-      suggestion.click();
-      await sleep(500);
-    }
-  }
-
-  // Fill item properties (level, quality, corrupted, etc.)
-  async function fillItemProperties(config) {
-    // Item level range
-    if (config.itemLevel.min || config.itemLevel.max) {
-      const levelSection = await findOrExpandSection("Item Level");
-      if (config.itemLevel.min) {
-        const minInput = levelSection.querySelector(
-          'input[placeholder*="Min"]'
-        );
-        if (minInput) fillInput(minInput, config.itemLevel.min);
-      }
-      if (config.itemLevel.max) {
-        const maxInput = levelSection.querySelector(
-          'input[placeholder*="Max"]'
-        );
-        if (maxInput) fillInput(maxInput, config.itemLevel.max);
-      }
-    }
-
-    // Quality range
-    if (config.quality.min || config.quality.max) {
-      const qualitySection = await findOrExpandSection("Quality");
-      if (config.quality.min) {
-        const minInput = qualitySection.querySelector(
-          'input[placeholder*="Min"]'
-        );
-        if (minInput) fillInput(minInput, config.quality.min);
-      }
-      if (config.quality.max) {
-        const maxInput = qualitySection.querySelector(
-          'input[placeholder*="Max"]'
-        );
-        if (maxInput) fillInput(maxInput, config.quality.max);
-      }
-    }
-
-    // Checkboxes
-    if (config.corrupted) {
-      await toggleCheckbox("corrupted", true);
-    }
-    if (config.fractured) {
-      await toggleCheckbox("fractured", true);
-    }
-    if (config.synthesised) {
-      await toggleCheckbox("synthesised", true);
-    }
-  }
-
-  // Fill explicit mods
-  async function fillMods(mods) {
-    const statsSection = await findOrExpandSection("Stats");
-
-    for (const mod of mods) {
-      await addStatFilter(mod);
-      await sleep(800); // Wait between adding stats
-    }
-  }
-
-  // Add a single stat filter
-  async function addStatFilter(mod) {
-    // Click "Add" button to add new stat
-    const addButton = document.querySelector(SELECTORS.addStatButton);
-    if (addButton) {
-      addButton.click();
-      await sleep(500);
-    }
-
-    // Find the newly added stat row (usually the last one)
-    const statRows = document.querySelectorAll(".search-advanced-item");
-    const newRow = statRows[statRows.length - 1];
-
-    if (!newRow) {
-      throw new Error("Could not find new stat row");
-    }
-
-    // Fill stat name
-    const statInput = newRow.querySelector('input[placeholder*="stat"]');
-    if (statInput) {
-      const modName = MOD_NAME_MAPPINGS[mod.id] || mod.name;
-      await typeText(statInput, modName);
-      await sleep(1000);
-
-      // Select from dropdown
-      const suggestion = document.querySelector(".search-suggestion-item");
-      if (suggestion) {
-        suggestion.click();
-        await sleep(300);
-      }
-    }
-
-    // Fill min/max values based on tier
-    const tierValues = TIER_VALUES[mod.id];
-    if (tierValues && tierValues[mod.tier]) {
-      const { min, max } = tierValues[mod.tier];
-
-      const minInput = newRow.querySelector('input[data-field*="min"]');
-      const maxInput = newRow.querySelector('input[data-field*="max"]');
-
-      if (minInput) fillInput(minInput, min);
-      if (maxInput) fillInput(maxInput, max);
-    }
-  }
-
-  // Fill price range
-  async function fillPriceRange(price) {
-    const priceSection = await findOrExpandSection("Price");
-
-    if (price.min) {
-      const minInput = priceSection.querySelector(SELECTORS.priceMin);
-      if (minInput) fillInput(minInput, price.min);
-    }
-
-    if (price.max) {
-      const maxInput = priceSection.querySelector(SELECTORS.priceMax);
-      if (maxInput) fillInput(maxInput, price.max);
-    }
-
-    if (price.currency) {
-      const currencySelect = priceSection.querySelector(
-        SELECTORS.priceCurrency
-      );
-      if (currencySelect) {
-        currencySelect.value = price.currency;
-        currencySelect.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    }
-  }
-
-  // Utility functions
-  function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  async function typeText(element, text) {
-    element.focus();
-    element.value = text;
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  function fillInput(element, value) {
-    element.focus();
-    element.value = value;
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  async function toggleCheckbox(name, checked) {
-    const checkbox =
-      document.querySelector(`input[data-field="${name}"]`) ||
-      document.querySelector(`input[name="${name}"]`) ||
-      document.querySelector(`#${name}`);
-
-    if (checkbox && checkbox.checked !== checked) {
-      checkbox.click();
-      await sleep(200);
-    }
-  }
-
-  async function findOrExpandSection(sectionName) {
-    // Look for section headers or expand buttons
-    const headers = document.querySelectorAll(
-      "h3, h4, .section-header, .filter-title"
-    );
-
-    for (const header of headers) {
-      if (
-        header.textContent.toLowerCase().includes(sectionName.toLowerCase())
-      ) {
-        // Check if section is collapsed and expand it
-        const expandButton =
-          header.querySelector(".expand-btn, .toggle-btn") ||
-          header.parentElement.querySelector(".expand-btn, .toggle-btn");
-
-        if (
-          expandButton &&
-          !header.parentElement.classList.contains("expanded")
-        ) {
-          expandButton.click();
-          await sleep(300);
-        }
-
-        return header.parentElement;
-      }
-    }
-
-    // Fallback: return document body if section not found
-    return document.body;
-  }
-
-  async function submitSearch() {
-    const searchButton =
-      document.querySelector(SELECTORS.searchButton) ||
-      document.querySelector(SELECTORS.searchSubmit) ||
-      document.querySelector('button[type="submit"]');
-
-    if (searchButton) {
-      searchButton.click();
-      await sleep(1000);
-    }
-  }
-
-  // Initialize content script
-  console.log("PoE Trade Helper content script loaded");
-})();
+console.log('🚀 PoE Trade Helper content script loaded for Abyss Jewels');

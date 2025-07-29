@@ -1,404 +1,515 @@
-// Content script for Path of Exile trade site auto-fill
-(function () {
-  "use strict";
+// PoE Easy Search - Content Script for pathofexile.com/trade
+console.log('🎯 PoE Easy Search content script loading...');
+console.log('📄 Current URL:', window.location.href);
 
-  // Trade site field selectors (these may need to be updated based on actual site structure)
-  const SELECTORS = {
-    // Base item search
-    itemName: 'input[placeholder="Enter name or base"]',
-    itemNameSuggestion: ".search-suggestion-item",
+// Wait for page to be fully loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeContentScript);
+} else {
+    initializeContentScript();
+}
 
-    // Item filters
-    itemLevelMin: 'input[placeholder="Min"]',
-    itemLevelMax: 'input[placeholder="Max"]',
-    qualityMin: 'input[data-field="q.min"]',
-    qualityMax: 'input[data-field="q.max"]',
-
-    // Checkboxes
-    corrupted: 'input[data-field="corrupted"]',
-    fractured: 'input[data-field="fractured"]',
-    synthesised: 'input[data-field="synthesised"]',
-
-    // Stats section
-    statsContainer: ".search-advanced-items",
-    addStatButton: ".search-advanced-add",
-    statDropdown: ".search-select-dropdown",
-    statInput: 'input[placeholder="Enter stat here"]',
-    statMinValue: 'input[data-field="stat.min"]',
-    statMaxValue: 'input[data-field="stat.max"]',
-
-    // Price filters
-    priceContainer: ".price-filter",
-    priceMin: 'input[data-field="price.min"]',
-    priceMax: 'input[data-field="price.max"]',
-    priceCurrency: 'select[data-field="price.currency"]',
-
-    // Search button
-    searchButton: ".btn-search",
-    searchSubmit: 'button[type="submit"]',
-  };
-
-  // Mod name mappings from extension format to trade site format
-  const MOD_NAME_MAPPINGS = {
-    energy_shield_flat: "+# to maximum Energy Shield",
-    energy_shield_percent: "#% increased Energy Shield",
-    life_flat: "+# to maximum Life",
-    resistances_all: "+#% to all Resistances",
-    melee_damage: "#% increased Melee Damage",
-    added_life_jewel: "+# to maximum Life",
-    attack_speed: "#% increased Attack Speed",
-    damage_percent: "#% increased Damage",
-    life_percent: "#% increased maximum Life",
-  };
-
-  // Tier value mappings (will be populated from RePoE data)
-  const TIER_VALUES = {
-    energy_shield_flat: {
-      T1: { min: 80, max: 89 },
-      T2: { min: 70, max: 79 },
-      T3: { min: 60, max: 69 },
-      T4: { min: 50, max: 59 },
-      T5: { min: 40, max: 49 },
-    },
-    life_flat: {
-      T1: { min: 90, max: 99 },
-      T2: { min: 80, max: 89 },
-      T3: { min: 70, max: 79 },
-      T4: { min: 60, max: 69 },
-      T5: { min: 50, max: 59 },
-    },
-    energy_shield_percent: {
-      T1: { min: 18, max: 20 },
-      T2: { min: 15, max: 17 },
-      T3: { min: 12, max: 14 },
-      T4: { min: 9, max: 11 },
-      T5: { min: 6, max: 8 },
-    },
-  };
-
-  // Main message listener
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "fillTradeForm") {
-      fillTradeForm(request.configuration)
-        .then((result) => sendResponse({ success: true, result }))
-        .catch((error) => {
-          console.error("Auto-fill error:", error);
-          sendResponse({ success: false, error: error.message });
-        });
-      return true; // Keep message channel open for async response
-    }
-  });
-
-  // Main function to fill the trade form
-  async function fillTradeForm(config) {
-    console.log("Starting trade form auto-fill with config:", config);
-
-    try {
-      // Wait for page to be ready
-      await waitForElement("body");
-
-      // Clear existing search first
-      await clearExistingSearch();
-
-      // Fill base item
-      if (config.baseItem) {
-        await fillBaseItem(config.baseItem);
-      }
-
-      // Fill item properties
-      await fillItemProperties(config);
-
-      // Fill mods
-      if (config.mods && config.mods.length > 0) {
-        await fillMods(config.mods);
-      }
-
-      // Fill price range
-      if (config.price && (config.price.min || config.price.max)) {
-        await fillPriceRange(config.price);
-      }
-
-      // Optional: Auto-submit the search
-      // await submitSearch();
-
-      return { message: "Form filled successfully" };
-    } catch (error) {
-      console.error("Error filling trade form:", error);
-      throw error;
-    }
-  }
-
-  // Utility function to wait for elements
-  function waitForElement(selector, timeout = 5000) {
-    return new Promise((resolve, reject) => {
-      const element = document.querySelector(selector);
-      if (element) {
-        resolve(element);
-        return;
-      }
-
-      const observer = new MutationObserver((mutations, obs) => {
-        const element = document.querySelector(selector);
-        if (element) {
-          obs.disconnect();
-          resolve(element);
+function initializeContentScript() {
+    console.log('✅ Content script initialized on:', window.location.href);
+    
+    // Listen for messages from background script
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        console.log('📨 Content script received message:', message.action);
+        
+        if (message.action === 'autoFill') {
+            console.log('🚀 Starting auto-fill process...');
+            handleAutoFill(message.config)
+                .then(result => {
+                    console.log('✅ Auto-fill completed:', result);
+                    sendResponse({ success: true, result });
+                })
+                .catch(error => {
+                    console.error('❌ Auto-fill error:', error);
+                    sendResponse({ success: false, error: error.message });
+                });
+            
+            // Return true to indicate async response
+            return true;
         }
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-      });
-
-      setTimeout(() => {
-        observer.disconnect();
-        reject(new Error(`Element ${selector} not found within ${timeout}ms`));
-      }, timeout);
+        
+        console.log('⚠️ Unknown action:', message.action);
+        sendResponse({ success: false, error: 'Unknown action' });
     });
-  }
+    
+    console.log('🎯 Content script ready for auto-fill requests');
+}
 
-  // Clear existing search parameters
-  async function clearExistingSearch() {
-    // Look for clear/reset button
-    const clearButton = document.querySelector(
-      '[data-clear="true"], .btn-clear, .search-clear'
-    );
-    if (clearButton) {
-      clearButton.click();
-      await sleep(500);
-    }
-  }
-
-  // Fill base item selection
-  async function fillBaseItem(baseItemId) {
-    const itemNameInput = await waitForElement(SELECTORS.itemName, 3000);
-
-    // Map base item ID to display name
-    const baseItemNames = {
-      "twilight-regalia": "Twilight Regalia",
-      "abyss-jewel-melee": "Abyss Jewel",
-      "cobalt-jewel": "Cobalt Jewel",
-      "searching-eye-jewel": "Searching Eye Jewel",
-    };
-
-    const itemName = baseItemNames[baseItemId] || baseItemId;
-
-    // Clear and type item name
-    itemNameInput.value = "";
-    itemNameInput.focus();
-    await typeText(itemNameInput, itemName);
-
-    // Wait for and select from dropdown suggestions
-    await sleep(1000);
-    const suggestion = document.querySelector(SELECTORS.itemNameSuggestion);
-    if (suggestion) {
-      suggestion.click();
-      await sleep(500);
-    }
-  }
-
-  // Fill item properties (level, quality, corrupted, etc.)
-  async function fillItemProperties(config) {
-    // Item level range
-    if (config.itemLevel.min || config.itemLevel.max) {
-      const levelSection = await findOrExpandSection("Item Level");
-      if (config.itemLevel.min) {
-        const minInput = levelSection.querySelector(
-          'input[placeholder*="Min"]'
-        );
-        if (minInput) fillInput(minInput, config.itemLevel.min);
-      }
-      if (config.itemLevel.max) {
-        const maxInput = levelSection.querySelector(
-          'input[placeholder*="Max"]'
-        );
-        if (maxInput) fillInput(maxInput, config.itemLevel.max);
-      }
-    }
-
-    // Quality range
-    if (config.quality.min || config.quality.max) {
-      const qualitySection = await findOrExpandSection("Quality");
-      if (config.quality.min) {
-        const minInput = qualitySection.querySelector(
-          'input[placeholder*="Min"]'
-        );
-        if (minInput) fillInput(minInput, config.quality.min);
-      }
-      if (config.quality.max) {
-        const maxInput = qualitySection.querySelector(
-          'input[placeholder*="Max"]'
-        );
-        if (maxInput) fillInput(maxInput, config.quality.max);
-      }
-    }
-
-    // Checkboxes
-    if (config.corrupted) {
-      await toggleCheckbox("corrupted", true);
-    }
-    if (config.fractured) {
-      await toggleCheckbox("fractured", true);
-    }
-    if (config.synthesised) {
-      await toggleCheckbox("synthesised", true);
-    }
-  }
-
-  // Fill explicit mods
-  async function fillMods(mods) {
-    const statsSection = await findOrExpandSection("Stats");
-
-    for (const mod of mods) {
-      await addStatFilter(mod);
-      await sleep(800); // Wait between adding stats
-    }
-  }
-
-  // Add a single stat filter
-  async function addStatFilter(mod) {
-    // Click "Add" button to add new stat
-    const addButton = document.querySelector(SELECTORS.addStatButton);
-    if (addButton) {
-      addButton.click();
-      await sleep(500);
-    }
-
-    // Find the newly added stat row (usually the last one)
-    const statRows = document.querySelectorAll(".search-advanced-item");
-    const newRow = statRows[statRows.length - 1];
-
-    if (!newRow) {
-      throw new Error("Could not find new stat row");
-    }
-
-    // Fill stat name
-    const statInput = newRow.querySelector('input[placeholder*="stat"]');
-    if (statInput) {
-      const modName = MOD_NAME_MAPPINGS[mod.id] || mod.name;
-      await typeText(statInput, modName);
-      await sleep(1000);
-
-      // Select from dropdown
-      const suggestion = document.querySelector(".search-suggestion-item");
-      if (suggestion) {
-        suggestion.click();
-        await sleep(300);
-      }
-    }
-
-    // Fill min/max values based on tier
-    const tierValues = TIER_VALUES[mod.id];
-    if (tierValues && tierValues[mod.tier]) {
-      const { min, max } = tierValues[mod.tier];
-
-      const minInput = newRow.querySelector('input[data-field*="min"]');
-      const maxInput = newRow.querySelector('input[data-field*="max"]');
-
-      if (minInput) fillInput(minInput, min);
-      if (maxInput) fillInput(maxInput, max);
-    }
-  }
-
-  // Fill price range
-  async function fillPriceRange(price) {
-    const priceSection = await findOrExpandSection("Price");
-
-    if (price.min) {
-      const minInput = priceSection.querySelector(SELECTORS.priceMin);
-      if (minInput) fillInput(minInput, price.min);
-    }
-
-    if (price.max) {
-      const maxInput = priceSection.querySelector(SELECTORS.priceMax);
-      if (maxInput) fillInput(maxInput, price.max);
-    }
-
-    if (price.currency) {
-      const currencySelect = priceSection.querySelector(
-        SELECTORS.priceCurrency
-      );
-      if (currencySelect) {
-        currencySelect.value = price.currency;
-        currencySelect.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    }
-  }
-
-  // Utility functions
-  function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  async function typeText(element, text) {
-    element.focus();
-    element.value = text;
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  function fillInput(element, value) {
-    element.focus();
-    element.value = value;
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  }
-
-  async function toggleCheckbox(name, checked) {
-    const checkbox =
-      document.querySelector(`input[data-field="${name}"]`) ||
-      document.querySelector(`input[name="${name}"]`) ||
-      document.querySelector(`#${name}`);
-
-    if (checkbox && checkbox.checked !== checked) {
-      checkbox.click();
-      await sleep(200);
-    }
-  }
-
-  async function findOrExpandSection(sectionName) {
-    // Look for section headers or expand buttons
-    const headers = document.querySelectorAll(
-      "h3, h4, .section-header, .filter-title"
-    );
-
-    for (const header of headers) {
-      if (
-        header.textContent.toLowerCase().includes(sectionName.toLowerCase())
-      ) {
-        // Check if section is collapsed and expand it
-        const expandButton =
-          header.querySelector(".expand-btn, .toggle-btn") ||
-          header.parentElement.querySelector(".expand-btn, .toggle-btn");
-
-        if (
-          expandButton &&
-          !header.parentElement.classList.contains("expanded")
-        ) {
-          expandButton.click();
-          await sleep(300);
+// Main auto-fill handler
+async function handleAutoFill(config) {
+    console.log('📝 Starting auto-fill with config:', config);
+    
+    try {
+        // Add a small delay to ensure page is ready
+        await wait(500);
+        
+        // Reset the form first (optional)
+        console.log('🔄 Resetting form...');
+        await resetTradeForm();
+        
+        // Set the base item type (jewel)
+        console.log('💎 Setting jewel type...');
+        await setBaseItemType(config.jewelType);
+        
+        // If we have specific mods to search for, add them
+        if (config.searchMode === 'with-mods' && config.selectedMods.length > 0) {
+            console.log('🔍 Adding mod filters...');
+            await addModFilters(config.selectedMods);
         }
-
-        return header.parentElement;
-      }
+        
+        console.log('✅ Auto-fill completed successfully');
+        return { 
+            success: true, 
+            message: `Auto-filled ${config.jewelType} ${config.searchMode === 'with-mods' ? 'with ' + config.selectedMods.length + ' mods' : 'base only'}` 
+        };
+        
+    } catch (error) {
+        console.error('❌ Auto-fill failed:', error);
+        throw error;
     }
+}
 
-    // Fallback: return document body if section not found
-    return document.body;
-  }
-
-  async function submitSearch() {
-    const searchButton =
-      document.querySelector(SELECTORS.searchButton) ||
-      document.querySelector(SELECTORS.searchSubmit) ||
-      document.querySelector('button[type="submit"]');
-
-    if (searchButton) {
-      searchButton.click();
-      await sleep(1000);
+// Reset the trade form
+async function resetTradeForm() {
+    console.log('🔄 Looking for reset/clear buttons...');
+    
+    // Look for various reset button selectors
+    const resetSelectors = [
+        '[data-testid="clear-all-filters"]',
+        'button[title*="Clear"]',
+        'button[title*="Reset"]',
+        '.clear-all',
+        '.reset-filters',
+        'button:contains("Clear")',
+        'button:contains("Reset")'
+    ];
+    
+    for (const selector of resetSelectors) {
+        const resetButton = document.querySelector(selector);
+        if (resetButton) {
+            console.log('✅ Found reset button:', selector);
+            resetButton.click();
+            await wait(300);
+            return;
+        }
     }
-  }
+    
+    console.log('⚠️ No reset button found - continuing without reset');
+}
 
-  // Initialize content script
-  console.log("PoE Trade Helper content script loaded");
-})();
+// Set the base item type (Abyss Jewel)
+async function setBaseItemType(jewelType) {
+    console.log('💎 Setting base item type:', jewelType);
+    
+    const jewelDisplayNames = {
+        'murderous-eye': 'Murderous Eye Jewel',
+        'searching-eye': 'Searching Eye Jewel', 
+        'hypnotic-eye': 'Hypnotic Eye Jewel',
+        'ghastly-eye': 'Ghastly Eye Jewel'
+    };
+    
+    const displayName = jewelDisplayNames[jewelType];
+    if (!displayName) {
+        throw new Error(`Unknown jewel type: ${jewelType}`);
+    }
+    
+    console.log('💎 Looking for item type field for:', displayName);
+    
+    // Try different selectors for the type dropdown/input
+    const typeSelectors = [
+        'select[data-testid="item-type-select"]',
+        'input[placeholder*="Type"]',
+        'input[placeholder*="Base"]',
+        '.filter-group select:first-child',
+        'select.form-control:first-child',
+        '#type',
+        '[name="type"]',
+        '.search-advanced-items select:first-child'
+    ];
+    
+    let typeField = null;
+    for (const selector of typeSelectors) {
+        typeField = document.querySelector(selector);
+        if (typeField) {
+            console.log('✅ Found type field:', selector, typeField.tagName);
+            break;
+        }
+    }
+    
+    if (!typeField) {
+        // Try to find any input/select that might be for item type
+        const allInputs = document.querySelectorAll('input[type="text"], select');
+        console.log('🔍 Found', allInputs.length, 'input/select fields, trying first few...');
+        
+        for (let i = 0; i < Math.min(3, allInputs.length); i++) {
+            const field = allInputs[i];
+            const placeholder = field.placeholder || '';
+            const id = field.id || '';
+            const className = field.className || '';
+            
+            console.log(`Field ${i}:`, { 
+                tag: field.tagName, 
+                placeholder, 
+                id, 
+                className: className.slice(0, 50) 
+            });
+            
+            // If it looks like it might be a type field, try it
+            if (placeholder.toLowerCase().includes('type') || 
+                placeholder.toLowerCase().includes('base') ||
+                id.toLowerCase().includes('type') ||
+                className.toLowerCase().includes('type')) {
+                typeField = field;
+                console.log('🎯 Trying field as type field:', field);
+                break;
+            }
+        }
+    }
+    
+    if (!typeField) {
+        throw new Error('Could not find item type field on the page');
+    }
+    
+    // Fill the field based on its type
+    if (typeField.tagName === 'SELECT') {
+        await selectFromDropdown(typeField, displayName);
+    } else {
+        await fillInputField(typeField, displayName);
+    }
+    
+    console.log('✅ Set jewel type to:', displayName);
+}
+
+// Add mod filters to the search
+async function addModFilters(selectedMods) {
+    console.log('🔍 Adding', selectedMods.length, 'mod filters...');
+    
+    for (let i = 0; i < selectedMods.length; i++) {
+        const mod = selectedMods[i];
+        console.log(`📝 Adding mod ${i + 1}/${selectedMods.length}:`, mod.modName);
+        
+        try {
+            await addSingleModFilter(mod, i);
+            await wait(500); // Delay between mods
+        } catch (error) {
+            console.error(`❌ Failed to add mod ${mod.modName}:`, error);
+            // Continue with other mods
+        }
+    }
+    
+    console.log('✅ Finished adding mod filters');
+}
+
+// Add a single mod filter
+async function addSingleModFilter(mod, filterIndex) {
+    console.log(`📝 Adding mod filter:`, mod.modName);
+    
+    // Look for "Add Stat Filter" or similar button
+    const addStatSelectors = [
+        'button[data-testid="add-stat-filter"]',
+        'button:contains("Add Stat")',
+        'button:contains("Add Filter")',
+        '.add-stat-filter',
+        '.add-filter',
+        'button[title*="Add"]'
+    ];
+    
+    let addStatButton = null;
+    for (const selector of addStatSelectors) {
+        // For :contains selectors, we need to find manually
+        if (selector.includes(':contains')) {
+            const buttons = document.querySelectorAll('button');
+            for (const btn of buttons) {
+                const text = btn.textContent.toLowerCase();
+                if (selector.includes('Add Stat') && text.includes('add') && text.includes('stat')) {
+                    addStatButton = btn;
+                    break;
+                } else if (selector.includes('Add Filter') && text.includes('add') && text.includes('filter')) {
+                    addStatButton = btn;
+                    break;
+                }
+            }
+        } else {
+            addStatButton = document.querySelector(selector);
+        }
+        
+        if (addStatButton) {
+            console.log('✅ Found add stat button:', selector);
+            break;
+        }
+    }
+    
+    if (!addStatButton) {
+        console.log('⚠️ Could not find "Add Stat Filter" button, trying alternative approach...');
+        // Maybe the form already has empty stat filters we can use
+        const existingFilters = document.querySelectorAll('.stat-filter, .filter-group, .form-group');
+        console.log('🔍 Found', existingFilters.length, 'existing filter containers');
+        
+        if (existingFilters.length === 0) {
+            throw new Error('Could not find stat filter interface');
+        }
+        
+        // Use the last existing filter or create approach
+        // This is a fallback - might need adjustment based on actual site structure
+    } else {
+        // Click to add new stat filter
+        addStatButton.click();
+        await wait(500);
+    }
+    
+    // Find the newly created or available filter container
+    const filterContainers = document.querySelectorAll('.stat-filter, .filter-group, .form-group');
+    let targetFilter = filterContainers[filterContainers.length - 1];
+    
+    if (!targetFilter && filterContainers.length > 0) {
+        targetFilter = filterContainers[0]; // Use first available
+    }
+    
+    if (!targetFilter) {
+        throw new Error('Could not find stat filter container');
+    }
+    
+    console.log('🎯 Using filter container:', targetFilter.className);
+    
+    // Find the stat selection field within this filter
+    const statField = targetFilter.querySelector('select, input[type="text"], input[placeholder*="stat"]');
+    
+    if (!statField) {
+        throw new Error('Could not find stat selection field');
+    }
+    
+    // Set the stat name
+    if (statField.tagName === 'SELECT') {
+        await selectFromDropdown(statField, mod.modName);
+    } else {
+        await fillInputField(statField, mod.modName);
+    }
+    
+    await wait(300);
+    
+    // Set min/max values
+    await setStatValues(targetFilter, mod);
+    
+    console.log('✅ Added mod filter:', mod.modName);
+}
+
+// Set the min/max values for a stat filter
+async function setStatValues(filterContainer, mod) {
+    console.log('📊 Setting stat values for:', mod.modName, `${mod.minValue}-${mod.maxValue}`);
+    
+    // Look for min/max input fields within the filter container
+    const numberInputs = filterContainer.querySelectorAll('input[type="number"]');
+    const textInputs = filterContainer.querySelectorAll('input[type="text"]');
+    
+    // Combine and filter for likely min/max fields
+    const allInputs = [...numberInputs, ...textInputs];
+    const valueInputs = allInputs.filter(input => {
+        const placeholder = (input.placeholder || '').toLowerCase();
+        const id = (input.id || '').toLowerCase();
+        const className = (input.className || '').toLowerCase();
+        
+        return placeholder.includes('min') || placeholder.includes('max') || 
+               placeholder.includes('value') || placeholder.includes('from') || 
+               placeholder.includes('to') || id.includes('min') || id.includes('max') ||
+               className.includes('min') || className.includes('max');
+    });
+    
+    console.log('🔍 Found', valueInputs.length, 'potential value inputs');
+    
+    // If we found exactly 2 inputs, assume first is min, second is max
+    if (valueInputs.length >= 2) {
+        const minInput = valueInputs[0];
+        const maxInput = valueInputs[1];
+        
+        console.log('📊 Setting min value:', mod.minValue);
+        await fillInputField(minInput, mod.minValue.toString());
+        
+        console.log('📊 Setting max value:', mod.maxValue);
+        await fillInputField(maxInput, mod.maxValue.toString());
+        
+    } else if (valueInputs.length === 1) {
+        // If only one input, set it to the min value
+        console.log('📊 Setting single value:', mod.minValue);
+        await fillInputField(valueInputs[0], mod.minValue.toString());
+        
+    } else {
+        console.log('⚠️ Could not find min/max value inputs for:', mod.modName);
+        // Try to find any number inputs in the container as fallback
+        const anyNumberInputs = filterContainer.querySelectorAll('input');
+        if (anyNumberInputs.length > 0) {
+            console.log('🔄 Trying fallback: setting first input to min value');
+            await fillInputField(anyNumberInputs[0], mod.minValue.toString());
+        }
+    }
+    
+    console.log('✅ Stat values set for:', mod.modName);
+}
+
+// Helper function to select from dropdown
+async function selectFromDropdown(selectElement, optionText) {
+    console.log('📋 Selecting from dropdown:', optionText);
+    
+    if (!selectElement.options) {
+        console.log('⚠️ Element is not a select dropdown');
+        return false;
+    }
+    
+    // Try to find exact match first
+    const options = Array.from(selectElement.options);
+    let targetOption = options.find(option => 
+        option.text.toLowerCase() === optionText.toLowerCase() ||
+        option.value.toLowerCase() === optionText.toLowerCase()
+    );
+    
+    // If no exact match, try partial match
+    if (!targetOption) {
+        targetOption = options.find(option =>
+            option.text.toLowerCase().includes(optionText.toLowerCase()) ||
+            optionText.toLowerCase().includes(option.text.toLowerCase())
+        );
+    }
+    
+    if (targetOption) {
+        selectElement.value = targetOption.value;
+        
+        // Trigger events to notify the page
+        selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+        selectElement.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        console.log('✅ Selected option:', targetOption.text);
+        await wait(200);
+        return true;
+    }
+    
+    console.log('⚠️ Could not find option:', optionText);
+    return false;
+}
+
+// Helper function to fill input field
+async function fillInputField(inputElement, value) {
+    console.log('✏️ Filling input field with:', value);
+    
+    // Clear existing value
+    inputElement.value = '';
+    inputElement.focus();
+    
+    // Set the value
+    inputElement.value = value;
+    
+    // Trigger input events to notify the page
+    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+    inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    // For some sites, we need to simulate typing
+    const inputEvent = new Event('input', { 
+        bubbles: true, 
+        cancelable: true, 
+        inputType: 'insertText', 
+        data: value 
+    });
+    inputElement.dispatchEvent(inputEvent);
+    
+    inputElement.blur();
+    await wait(200);
+    
+    console.log('✅ Input filled with:', value);
+}
+
+// Helper function to wait
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Enhanced element finder with multiple strategies
+function findElement(selectors, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        let element = null;
+        
+        // Try each selector
+        for (const selector of selectors) {
+            try {
+                element = document.querySelector(selector);
+                if (element) {
+                    resolve(element);
+                    return;
+                }
+            } catch (e) {
+                console.log('⚠️ Invalid selector:', selector, e.message);
+            }
+        }
+        
+        // If not found immediately, wait and retry
+        const startTime = Date.now();
+        const interval = setInterval(() => {
+            for (const selector of selectors) {
+                try {
+                    element = document.querySelector(selector);
+                    if (element) {
+                        clearInterval(interval);
+                        resolve(element);
+                        return;
+                    }
+                } catch (e) {
+                    // Skip invalid selectors
+                }
+            }
+            
+            // Timeout check
+            if (Date.now() - startTime > timeout) {
+                clearInterval(interval);
+                reject(new Error(`Element not found after ${timeout}ms: ${selectors.join(', ')}`));
+            }
+        }, 100);
+    });
+}
+
+// Debug function to inspect page structure
+function debugPageStructure() {
+    console.log('🔍 Page Structure Debug:');
+    console.log('- URL:', window.location.href);
+    console.log('- Title:', document.title);
+    
+    // Find all form elements
+    const forms = document.querySelectorAll('form');
+    console.log('- Forms found:', forms.length);
+    
+    const inputs = document.querySelectorAll('input');
+    console.log('- Inputs found:', inputs.length);
+    
+    const selects = document.querySelectorAll('select');
+    console.log('- Selects found:', selects.length);
+    
+    const buttons = document.querySelectorAll('button');
+    console.log('- Buttons found:', buttons.length);
+    
+    // Log first few inputs with their attributes
+    for (let i = 0; i < Math.min(5, inputs.length); i++) {
+        const input = inputs[i];
+        console.log(`Input ${i}:`, {
+            type: input.type,
+            placeholder: input.placeholder,
+            id: input.id,
+            className: input.className.slice(0, 30)
+        });
+    }
+    
+    // Log first few selects
+    for (let i = 0; i < Math.min(3, selects.length); i++) {
+        const select = selects[i];
+        console.log(`Select ${i}:`, {
+            id: select.id,
+            className: select.className.slice(0, 30),
+            options: select.options.length
+        });
+    }
+}
+
+// Make debug function available globally
+window.debugPageStructure = debugPageStructure;
+
+console.log('✅ PoE Easy Search content script loaded successfully');
+console.log('🔍 Call debugPageStructure() in console to inspect page structure');

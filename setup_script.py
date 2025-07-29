@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 PoE Trade Helper - Project Setup Script
-Creates the directory structure and placeholder files directly in PoEEasySearch/
+Creates the directory structure and placeholder files for the extension.
 """
 
 import os
@@ -11,8 +11,9 @@ from pathlib import Path
 def create_directory_structure():
     """Create the basic directory structure."""
     directories = [
-        'icons',
-        'data'
+        'poe-trade-helper-abyss',
+        'poe-trade-helper-abyss/icons',
+        'poe-trade-helper-abyss/data'
     ]
     
     for directory in directories:
@@ -24,7 +25,7 @@ def create_icon_placeholders():
     icons = ['icon16.png', 'icon32.png', 'icon48.png', 'icon128.png']
     
     for icon in icons:
-        icon_path = Path(f'icons/{icon}')
+        icon_path = Path(f'poe-trade-helper-abyss/icons/{icon}')
         if not icon_path.exists():
             # Create a minimal placeholder - you'll need to replace with real PNG files
             icon_path.write_text(f"Placeholder for {icon} - Replace with actual PNG file")
@@ -72,26 +73,26 @@ def create_data_placeholders():
     }
     
     # Write data files
-    with open('data/abyss_jewels.json', 'w') as f:
+    with open('poe-trade-helper-abyss/data/abyss_jewels.json', 'w') as f:
         json.dump(jewel_data, f, indent=2)
     print("✓ Created: data/abyss_jewels.json")
     
-    with open('data/abyss_jewels_mods.json', 'w') as f:
+    with open('poe-trade-helper-abyss/data/abyss_jewels_mods.json', 'w') as f:
         json.dump(mod_data, f, indent=2)
     print("✓ Created: data/abyss_jewels_mods.json")
 
 def create_readme():
     """Create a README with setup instructions."""
-    readme_content = """# PoE Easy Search - Abyss Jewels Edition
+    readme_content = """# PoE Trade Helper - Abyss Jewels Edition
 
 ## Quick Setup
 
 1. **Copy the core files from artifacts to this directory:**
-   - Copy `Fixed Manifest V3` → `manifest.json`
-   - Copy `Fixed Popup HTML` → `popup.html`
-   - Copy `Fixed Popup JavaScript` → `popup.js`
-   - Copy `Fixed Background Service Worker` → `background.js`
-   - Copy `Fixed Content Script` → `content.js`
+   - Copy `Working Manifest V3` → `manifest.json`
+   - Copy `Working Popup HTML` → `popup.html`
+   - Copy `Working Popup JavaScript` → `popup.js`
+   - Copy `Working Background Service Worker` → `background.js`
+   - Copy `Working Content Script` → `content.js`
 
 2. **Replace icon placeholders with real PNG files:**
    - Add actual PNG files to `icons/` directory
@@ -101,11 +102,11 @@ def create_readme():
    - Open `chrome://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked"
-   - Select this PoEEasySearch directory
+   - Select this directory
 
 4. **Test the extension:**
    - Click the extension icon in Chrome toolbar
-   - Should see 4 Abyss Jewel types in dropdown
+   - Select an Abyss Jewel type
    - Try searching for mods like "life", "es", "fire res"
    - Test the tier selection modal
 
@@ -127,24 +128,22 @@ Try these in the mod search:
 - `attack speed` → Attack Speed
 - `minion damage` → Minion Damage
 
-## Troubleshooting
+## Next Steps
 
-If the extension doesn't work:
-1. Check browser console (F12) for JavaScript errors
-2. Verify all 5 core files are copied correctly
-3. Make sure popup.js loads without syntax errors
-4. Check that icons directory has PNG files (not text placeholders)
+1. Test core functionality with mock data
+2. Test auto-fill on PoE trade site
+3. Replace mock data with real PoE mod database
+4. Add proper icons
 
 """
     
-    with open('README.md', 'w', encoding='utf-8') as f:
+    with open('poe-trade-helper-abyss/README.md', 'w') as f:
         f.write(readme_content)
     print("✓ Created: README.md")
 
 def main():
     """Main setup function."""
-    print("🚀 Setting up PoE Easy Search project structure...")
-    print(f"📁 Working in directory: {os.getcwd()}")
+    print("🚀 Setting up PoE Trade Helper project structure...")
     print()
     
     create_directory_structure()
@@ -156,11 +155,11 @@ def main():
     print("✅ Project structure created successfully!")
     print()
     print("📋 Next steps:")
-    print("1. Copy the 5 core files from artifacts to this directory")
+    print("1. Copy the 5 core files from artifacts to poe-trade-helper-abyss/")
     print("2. Replace icon placeholders with real PNG files")
     print("3. Load extension in Chrome and test functionality")
     print()
-    print("📁 Extension ready in current directory")
+    print("📁 Project ready at: ./poe-trade-helper-abyss/")
 
 if __name__ == "__main__":
     main()

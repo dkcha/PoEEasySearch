@@ -1,500 +1,463 @@
-// Enhanced popup.js with no-mods support and RePoE integration
-class PoETradeExtensionUI {
+/**
+ * Popup Controller for PoE Trade Helper - Abyss Jewels
+ * Handles UI interactions and search functionality
+ */
+
+class AbyssJewelPopupController {
     constructor() {
-        this.config = {
-            baseItem: '',
+        this.processor = new AbyssJewelDataProcessor();
+        this.searchConfig = {
+            baseItem: null,
+            searchType: 'base',
+            selectedMods: [],
             itemLevel: { min: null, max: null },
-            quality: { min: null, max: null },
-            corrupted: false,
-            fractured: false,
-            synthesised: false,
-            mods: [],
-            price: { min: null, max: null, currency: 'chaos' }
+            price: { min: null, max: null }
         };
-        
-        this.availableMods = {};
-        this.dataProcessor = null;
-        
-        this.initializeUI();
-        this.loadConfiguration();
-        this.waitForDataProcessor();
+        this.currentSuggestionIndex = -1;
+        this.currentTierSelection = null;
     }
 
-    async waitForDataProcessor() {
-        // Wait for the data processor to be available
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds
-        
-        while (!window.repoDataProcessor && attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        
-        if (window.repoDataProcessor) {
-            this.dataProcessor = window.repoDataProcessor;
-            
-            // Wait for data to be loaded
-            attempts = 0;
-            while (!this.dataProcessor.baseItems && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
+    async initialize() {
+        try {
+            await this.processor.initialize();
+            this.setupEventListeners();
             this.populateBaseItems();
-            this.updateStatus('✅ Ready - RePoE data loaded');
-        } else {
-            this.updateStatus('⚠️ Using mock data - RePoE unavailable');
+            console.log('✅ Abyss Jewel Popup Controller initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize popup controller:', error);
+            this.showError('Failed to load extension data. Please refresh.');
+            throw error;
         }
     }
 
-    initializeUI() {
-        this.bindEvents();
-        this.updateSearchTypeVisibility();
-    }
-
-    bindEvents() {
-        // Search type toggle
-        const searchTypeRadios = document.querySelectorAll('input[name="searchType"]');
-        searchTypeRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                this.updateSearchTypeVisibility();
-            });
-        });
-
+    setupEventListeners() {
         // Base item selection
-        const baseItemSelect = document.getElementById('baseItem');
-        baseItemSelect.addEventListener('change', (e) => {
-            this.config.baseItem = e.target.value;
-            this.onBaseItemChange();
-            this.saveConfiguration();
+        document.getElementById('baseItemSelect').addEventListener('change', (e) => {
+            this.searchConfig.baseItem = e.target.value;
+            this.updateModSearchState();
         });
 
-        // Item level inputs
-        document.getElementById('itemLevelMin').addEventListener('input', (e) => {
-            this.config.itemLevel.min = e.target.value ? parseInt(e.target.value) : null;
-            this.saveConfiguration();
-        });
-
-        document.getElementById('itemLevelMax').addEventListener('input', (e) => {
-            this.config.itemLevel.max = e.target.value ? parseInt(e.target.value) : null;
-            this.saveConfiguration();
-        });
-
-        // Quality inputs
-        document.getElementById('qualityMin').addEventListener('input', (e) => {
-            this.config.quality.min = e.target.value ? parseInt(e.target.value) : null;
-            this.saveConfiguration();
-        });
-
-        document.getElementById('qualityMax').addEventListener('input', (e) => {
-            this.config.quality.max = e.target.value ? parseInt(e.target.value) : null;
-            this.saveConfiguration();
-        });
-
-        // Boolean toggles
-        document.getElementById('corrupted').addEventListener('change', (e) => {
-            this.config.corrupted = e.target.checked;
-            this.saveConfiguration();
-        });
-
-        document.getElementById('fractured').addEventListener('change', (e) => {
-            this.config.fractured = e.target.checked;
-            this.saveConfiguration();
-        });
-
-        document.getElementById('synthesised').addEventListener('change', (e) => {
-            this.config.synthesised = e.target.checked;
-            this.saveConfiguration();
-        });
-
-        // Price inputs
-        document.getElementById('priceMin').addEventListener('input', (e) => {
-            this.config.price.min = e.target.value ? parseFloat(e.target.value) : null;
-            this.saveConfiguration();
-        });
-
-        document.getElementById('priceMax').addEventListener('input', (e) => {
-            this.config.price.max = e.target.value ? parseFloat(e.target.value) : null;
-            this.saveConfiguration();
-        });
-
-        document.getElementById('priceCurrency').addEventListener('change', (e) => {
-            this.config.price.currency = e.target.value;
-            this.saveConfiguration();
-        });
-
-        // Action buttons
-        document.getElementById('addMod').addEventListener('click', () => {
-            this.addMod();
-        });
-
-        document.getElementById('clearMods').addEventListener('click', () => {
-            this.clearMods();
-        });
-
-        document.getElementById('searchTrade').addEventListener('click', () => {
-            this.executeSearch();
-        });
-
-        document.getElementById('resetConfig').addEventListener('click', () => {
-            this.resetConfiguration();
-        });
-
-        // Collapsible sections
-        document.querySelectorAll('.collapsible-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const section = header.parentElement;
-                section.classList.toggle('collapsed');
+        // Search type toggle
+        document.querySelectorAll('.toggle-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                this.switchSearchType(e.target.dataset.type);
             });
         });
-    }
 
-    updateSearchTypeVisibility() {
-        const searchType = document.querySelector('input[name="searchType"]:checked').value;
-        const modsSection = document.querySelector('.section.mods');
-        const searchButton = document.getElementById('searchTrade');
-        
-        if (searchType === 'baseOnly') {
-            modsSection.style.display = 'none';
-            searchButton.textContent = 'Search Base Items';
-            this.updateStatus('🎯 Base item search mode - no mods required');
-        } else {
-            modsSection.style.display = 'block';
-            searchButton.textContent = 'Search with Mods';
-            this.updateStatus('🔧 Mod-based search mode');
-        }
+        // Mod search input
+        const modInput = document.getElementById('modSearchInput');
+        modInput.addEventListener('input', (e) => {
+            this.onModSearchInput(e.target.value);
+        });
+        modInput.addEventListener('keydown', (e) => {
+            this.handleModSearchKeydown(e);
+        });
+
+        // Advanced options toggle
+        document.getElementById('advancedToggle').addEventListener('click', () => {
+            this.toggleAdvancedOptions();
+        });
+
+        // Search buttons
+        document.getElementById('searchBaseBtn').addEventListener('click', () => {
+            this.performBaseSearch();
+        });
+        document.getElementById('searchModsBtn').addEventListener('click', () => {
+            this.performModSearch();
+        });
+
+        // Tier modal
+        document.getElementById('confirmTierBtn').addEventListener('click', () => {
+            this.confirmTierSelection();
+        });
+        document.getElementById('cancelTierBtn').addEventListener('click', () => {
+            this.closeTierModal();
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.mod-search-container')) {
+                this.hideSuggestions();
+            }
+        });
     }
 
     populateBaseItems() {
-        if (!this.dataProcessor || !this.dataProcessor.baseItems) {
-            this.populateMockBaseItems();
+        const baseItems = this.processor.getBaseItems();
+        const select = document.getElementById('baseItemSelect');
+        
+        Object.entries(baseItems).forEach(([key, item]) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = item.name;
+            select.appendChild(option);
+        });
+    }
+
+    switchSearchType(type) {
+        this.searchConfig.searchType = type;
+        
+        // Update toggle buttons
+        document.querySelectorAll('.toggle-option').forEach(option => {
+            option.classList.toggle('active', option.dataset.type === type);
+        });
+
+        // Show/hide sections
+        const modSection = document.getElementById('modSearchSection');
+        const baseBtn = document.getElementById('searchBaseBtn');
+        const modBtn = document.getElementById('searchModsBtn');
+
+        if (type === 'mods') {
+            modSection.classList.add('active');
+            baseBtn.style.display = 'none';
+            modBtn.style.display = 'block';
+        } else {
+            modSection.classList.remove('active');
+            baseBtn.style.display = 'block';
+            modBtn.style.display = 'none';
+        }
+
+        this.updateModSearchState();
+    }
+
+    updateModSearchState() {
+        const modInput = document.getElementById('modSearchInput');
+        const hasBaseItem = this.searchConfig.baseItem;
+        const isModSearch = this.searchConfig.searchType === 'mods';
+        
+        modInput.disabled = !hasBaseItem || !isModSearch;
+        
+        if (!hasBaseItem && isModSearch) {
+            this.showError('Please select an Abyss Jewel first');
+        } else {
+            this.hideError();
+        }
+    }
+
+    onModSearchInput(query) {
+        if (!query || query.length < 2) {
+            this.hideSuggestions();
             return;
         }
 
-        const baseItemSelect = document.getElementById('baseItem');
-        baseItemSelect.innerHTML = '<option value="">Select base item...</option>';
+        const results = this.processor.findMatchingMods(
+            this.searchConfig.baseItem, 
+            query, 
+            8
+        );
 
-        const itemsByCategory = this.dataProcessor.getBaseItemsByCategory();
+        this.displaySuggestions(results);
+        this.currentSuggestionIndex = -1;
+    }
+
+    displaySuggestions(results) {
+        const container = document.getElementById('modSuggestions');
         
-        for (const [category, items] of Object.entries(itemsByCategory)) {
-            // Skip empty categories or categories with unhelpful names
-            if (!items.length || category.startsWith('DONOTUSE')) continue;
+        if (results.length === 0) {
+            this.hideSuggestions();
+            return;
+        }
+
+        container.innerHTML = '';
+        container.style.display = 'block';
+
+        results.forEach((result, index) => {
+            const div = document.createElement('div');
+            div.className = 'mod-suggestion';
+            div.dataset.index = index;
             
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = this.formatCategoryName(category);
+            const scoreClass = result.score >= 90 ? 'score-excellent' : 
+                             result.score >= 70 ? 'score-good' : 'score-fair';
             
-            items.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = `${item.name} (Level ${item.level})`;
-                optgroup.appendChild(option);
+            div.innerHTML = `
+                <span class="mod-suggestion-name">${result.displayName}</span>
+                <span class="mod-suggestion-score ${scoreClass}">${result.score}%</span>
+            `;
+            
+            div.addEventListener('click', () => {
+                this.selectModSuggestion(result);
             });
             
-            baseItemSelect.appendChild(optgroup);
+            container.appendChild(div);
+        });
+    }
+
+    handleModSearchKeydown(e) {
+        const suggestions = document.querySelectorAll('.mod-suggestion');
+        
+        if (suggestions.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                this.currentSuggestionIndex = Math.min(
+                    this.currentSuggestionIndex + 1, 
+                    suggestions.length - 1
+                );
+                this.highlightSuggestion();
+                break;
+                
+            case 'ArrowUp':
+                e.preventDefault();
+                this.currentSuggestionIndex = Math.max(
+                    this.currentSuggestionIndex - 1, 
+                    0
+                );
+                this.highlightSuggestion();
+                break;
+                
+            case 'Enter':
+                e.preventDefault();
+                if (this.currentSuggestionIndex >= 0) {
+                    const modInput = document.getElementById('modSearchInput');
+                    const query = modInput.value;
+                    const results = this.processor.findMatchingMods(
+                        this.searchConfig.baseItem, 
+                        query, 
+                        8
+                    );
+                    if (results[this.currentSuggestionIndex]) {
+                        this.selectModSuggestion(results[this.currentSuggestionIndex]);
+                    }
+                }
+                break;
+                
+            case 'Escape':
+                this.hideSuggestions();
+                break;
         }
-
-        this.updateStatus('📦 Base items loaded from RePoE');
     }
 
-    populateMockBaseItems() {
-        const baseItemSelect = document.getElementById('baseItem');
-        baseItemSelect.innerHTML = `
-            <option value="">Select base item...</option>
-            <optgroup label="Belts">
-                <option value="crystal-belt">Crystal Belt (Level 79)</option>
-                <option value="leather-belt">Leather Belt (Level 1)</option>
-            </optgroup>
-            <optgroup label="Rings">
-                <option value="prismatic-ring">Prismatic Ring (Level 30)</option>
-            </optgroup>
-        `;
-        
-        this.updateStatus('📦 Using mock base items');
-    }
-
-    formatCategoryName(category) {
-        // Convert item class names to readable format
-        const nameMap = {
-            'Body Armour': 'Body Armours',
-            'AbyssJewel': 'Abyss Jewels',
-            'Active Skill Gem': 'Active Skill Gems'
-        };
-        
-        return nameMap[category] || category;
-    }
-
-    onBaseItemChange() {
-        if (this.config.baseItem && this.dataProcessor) {
-            this.availableMods = this.dataProcessor.getAvailableModsForItem(this.config.baseItem);
-            this.updateModSelectors();
-            this.updateStatus(`🔍 Loaded ${Object.keys(this.availableMods).length} available mods for ${this.config.baseItem}`);
-        }
-    }
-
-    updateModSelectors() {
-        // Clear existing mod rows but keep the template
-        const modContainer = document.getElementById('modContainer');
-        const existingRows = modContainer.querySelectorAll('.mod-row:not(.template)');
-        existingRows.forEach(row => row.remove());
-
-        // Regenerate mod rows based on current config
-        this.config.mods.forEach((mod, index) => {
-            this.addModRow(mod, index);
+    highlightSuggestion() {
+        const suggestions = document.querySelectorAll('.mod-suggestion');
+        suggestions.forEach((suggestion, index) => {
+            suggestion.classList.toggle(
+                'highlighted', 
+                index === this.currentSuggestionIndex
+            );
         });
     }
 
-    addMod() {
-        const newMod = {
-            id: '',
-            tier: 'T1',
-            name: ''
-        };
-        
-        this.config.mods.push(newMod);
-        this.addModRow(newMod, this.config.mods.length - 1);
-        this.saveConfiguration();
+    selectModSuggestion(modData) {
+        this.currentTierSelection = modData;
+        this.showTierSelection(modData);
+        this.hideSuggestions();
+        document.getElementById('modSearchInput').value = '';
     }
 
-    addModRow(mod, index) {
-        const modContainer = document.getElementById('modContainer');
-        const template = modContainer.querySelector('.mod-row.template');
-        const newRow = template.cloneNode(true);
+    showTierSelection(modData) {
+        const modal = document.getElementById('tierModal');
+        const options = document.getElementById('tierOptions');
+        const title = document.querySelector('.tier-modal-title');
         
-        newRow.classList.remove('template');
-        newRow.style.display = 'flex';
+        title.textContent = `Select Tier for ${modData.displayName}`;
         
-        // Set up mod selection dropdown
-        const modSelect = newRow.querySelector('.mod-select');
-        modSelect.innerHTML = '<option value="">Select mod...</option>';
+        const tiers = this.processor.getAvailableTiers(
+            modData.modKey, 
+            this.searchConfig.baseItem
+        );
         
-        for (const [modId, modData] of Object.entries(this.availableMods)) {
-            const option = document.createElement('option');
-            option.value = modId;
-            option.textContent = modData.name;
-            if (modId === mod.id) option.selected = true;
-            modSelect.appendChild(option);
-        }
+        options.innerHTML = '';
         
-        // Set up tier selection dropdown
-        const tierSelect = newRow.querySelector('.tier-select');
-        this.updateTierOptions(tierSelect, mod.id, mod.tier);
-        
-        // Event listeners
-        modSelect.addEventListener('change', (e) => {
-            this.config.mods[index].id = e.target.value;
-            this.config.mods[index].name = this.availableMods[e.target.value]?.name || '';
-            this.updateTierOptions(tierSelect, e.target.value, 'T1');
-            this.config.mods[index].tier = 'T1';
-            tierSelect.value = 'T1';
-            this.saveConfiguration();
+        tiers.forEach(tier => {
+            const div = document.createElement('div');
+            div.className = 'tier-option';
+            div.dataset.tierKey = tier.tierKey;
+            
+            const values = this.processor.convertTierToValues(
+                modData.modKey,
+                this.searchConfig.baseItem,
+                tier.tierKey
+            );
+            
+            div.innerHTML = `
+                <div class="tier-name">${tier.displayName}</div>
+                <div class="tier-values">${values.min}-${values.max}</div>
+            `;
+            
+            div.addEventListener('click', () => {
+                document.querySelectorAll('.tier-option').forEach(opt => 
+                    opt.classList.remove('selected')
+                );
+                div.classList.add('selected');
+            });
+            
+            options.appendChild(div);
         });
         
-        tierSelect.addEventListener('change', (e) => {
-            this.config.mods[index].tier = e.target.value;
-            this.saveConfiguration();
-        });
-        
-        const removeBtn = newRow.querySelector('.remove-mod');
-        removeBtn.addEventListener('click', () => {
-            this.removeMod(index);
-        });
-        
-        modContainer.appendChild(newRow);
+        modal.classList.add('active');
     }
 
-    updateTierOptions(tierSelect, modId, selectedTier = 'T1') {
-        tierSelect.innerHTML = '';
+    confirmTierSelection() {
+        const selectedTier = document.querySelector('.tier-option.selected');
         
-        if (!modId || !this.availableMods[modId]) {
-            tierSelect.innerHTML = '<option value="">Select tier...</option>';
+        if (!selectedTier || !this.currentTierSelection) {
+            this.showError('Please select a tier');
             return;
         }
         
-        const mod = this.availableMods[modId];
-        mod.tiers.forEach(tier => {
-            const option = document.createElement('option');
-            option.value = tier.tier;
-            option.textContent = `${tier.tier} (${tier.values.min}-${tier.values.max})`;
-            if (tier.tier === selectedTier) option.selected = true;
-            tierSelect.appendChild(option);
+        const tierKey = selectedTier.dataset.tierKey;
+        const values = this.processor.convertTierToValues(
+            this.currentTierSelection.modKey,
+            this.searchConfig.baseItem,
+            tierKey
+        );
+        
+        const modEntry = {
+            modKey: this.currentTierSelection.modKey,
+            displayName: this.currentTierSelection.displayName,
+            tier: values.tier,
+            values: values
+        };
+        
+        this.addSelectedMod(modEntry);
+        this.closeTierModal();
+    }
+
+    addSelectedMod(modEntry) {
+        // Check if mod already exists
+        const existingIndex = this.searchConfig.selectedMods.findIndex(
+            mod => mod.modKey === modEntry.modKey
+        );
+        
+        if (existingIndex >= 0) {
+            this.searchConfig.selectedMods[existingIndex] = modEntry;
+        } else {
+            this.searchConfig.selectedMods.push(modEntry);
+        }
+        
+        this.updateSelectedModsDisplay();
+    }
+
+    updateSelectedModsDisplay() {
+        const container = document.getElementById('selectedModsList');
+        
+        if (this.searchConfig.selectedMods.length === 0) {
+            container.innerHTML = '<div style="color: #6b7280; font-style: italic;">No mods selected</div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        this.searchConfig.selectedMods.forEach((mod, index) => {
+            const div = document.createElement('div');
+            div.className = 'selected-mod';
+            
+            div.innerHTML = `
+                <div class="selected-mod-info">
+                    <div class="selected-mod-name">${mod.displayName}</div>
+                    <div class="selected-mod-values">${mod.tier}: ${mod.values.min}-${mod.values.max}</div>
+                </div>
+                <button class="remove-mod-btn" data-index="${index}">Remove</button>
+            `;
+            
+            div.querySelector('.remove-mod-btn').addEventListener('click', () => {
+                this.removeSelectedMod(index);
+            });
+            
+            container.appendChild(div);
         });
     }
 
-    removeMod(index) {
-        this.config.mods.splice(index, 1);
-        this.updateModSelectors();
-        this.saveConfiguration();
+    removeSelectedMod(index) {
+        this.searchConfig.selectedMods.splice(index, 1);
+        this.updateSelectedModsDisplay();
     }
 
-    clearMods() {
-        this.config.mods = [];
-        this.updateModSelectors();
-        this.saveConfiguration();
-        this.updateStatus('🗑️ All mods cleared');
+    closeTierModal() {
+        document.getElementById('tierModal').classList.remove('active');
+        this.currentTierSelection = null;
     }
 
-    async executeSearch() {
-        try {
-            this.updateStatus('🔄 Generating search...');
-            
-            // Validate configuration
-            const validation = this.dataProcessor ? 
-                this.dataProcessor.validateConfiguration(this.config) : 
-                this.validateBasicConfiguration();
-            
-            if (!validation.isValid) {
-                this.updateStatus(`❌ ${validation.errors[0]}`);
-                return;
-            }
+    hideSuggestions() {
+        document.getElementById('modSuggestions').style.display = 'none';
+        this.currentSuggestionIndex = -1;
+    }
 
-            // Generate trade URL
-            let tradeUrl;
-            if (this.dataProcessor) {
-                tradeUrl = this.dataProcessor.generateTradeUrl(this.config);
-            } else {
-                tradeUrl = this.generateMockTradeUrl();
-            }
-
-            // Open in new tab
-            await chrome.tabs.create({ url: tradeUrl });
-            
-            const searchType = document.querySelector('input[name="searchType"]:checked').value;
-            const modCount = this.config.mods.length;
-            
-            if (searchType === 'baseOnly') {
-                this.updateStatus('✅ Base item search opened');
-            } else {
-                this.updateStatus(`✅ Search opened with ${modCount} mod${modCount !== 1 ? 's' : ''}`);
-            }
-            
-        } catch (error) {
-            console.error('Search execution failed:', error);
-            this.updateStatus(`❌ Search failed: ${error.message}`);
+    toggleAdvancedOptions() {
+        const toggle = document.getElementById('advancedToggle');
+        const content = document.getElementById('advancedContent');
+        
+        const isCollapsed = toggle.classList.contains('collapsed');
+        
+        toggle.classList.toggle('collapsed');
+        content.classList.toggle('collapsed');
+        
+        // Animate content
+        if (isCollapsed) {
+            content.style.maxHeight = content.scrollHeight + 'px';
+        } else {
+            content.style.maxHeight = '0';
         }
     }
 
-    validateBasicConfiguration() {
-        const errors = [];
-        
-        if (!this.config.baseItem) {
-            errors.push('Base item is required');
+    performBaseSearch() {
+        if (!this.searchConfig.baseItem) {
+            this.showError('Please select an Abyss Jewel');
+            return;
         }
         
-        return {
-            isValid: errors.length === 0,
-            errors: errors
-        };
+        const config = { ...this.searchConfig };
+        config.selectedMods = []; // Base search doesn't use mods
+        
+        const url = this.processor.generateTradeUrlWithMods(config);
+        this.openTradeUrl(url);
     }
 
-    generateMockTradeUrl() {
-        const baseUrl = 'https://www.pathofexile.com/trade/search/Settlers';
-        const query = {
-            status: { option: "online" },
-            type: this.config.baseItem
-        };
-        
-        const encodedQuery = encodeURIComponent(JSON.stringify(query));
-        return `${baseUrl}?q=${encodedQuery}`;
-    }
-
-    saveConfiguration() {
-        chrome.storage.local.set({ 'poe-trade-config': this.config }, () => {
-            if (chrome.runtime.lastError) {
-                console.error('Failed to save configuration:', chrome.runtime.lastError);
-            }
-        });
-    }
-
-    loadConfiguration() {
-        chrome.storage.local.get('poe-trade-config', (result) => {
-            if (result['poe-trade-config']) {
-                this.config = { ...this.config, ...result['poe-trade-config'] };
-                this.populateUIFromConfig();
-            }
-        });
-    }
-
-    populateUIFromConfig() {
-        // Set base item
-        const baseItemSelect = document.getElementById('baseItem');
-        if (baseItemSelect) baseItemSelect.value = this.config.baseItem || '';
-
-        // Set item level
-        const itemLevelMin = document.getElementById('itemLevelMin');
-        if (itemLevelMin) itemLevelMin.value = this.config.itemLevel.min || '';
-        
-        const itemLevelMax = document.getElementById('itemLevelMax');
-        if (itemLevelMax) itemLevelMax.value = this.config.itemLevel.max || '';
-
-        // Set quality
-        const qualityMin = document.getElementById('qualityMin');
-        if (qualityMin) qualityMin.value = this.config.quality.min || '';
-        
-        const qualityMax = document.getElementById('qualityMax');
-        if (qualityMax) qualityMax.value = this.config.quality.max || '';
-
-        // Set boolean flags
-        const corruptedCheck = document.getElementById('corrupted');
-        if (corruptedCheck) corruptedCheck.checked = this.config.corrupted;
-        
-        const fracturedCheck = document.getElementById('fractured');
-        if (fracturedCheck) fracturedCheck.checked = this.config.fractured;
-        
-        const synthesisedCheck = document.getElementById('synthesised');
-        if (synthesisedCheck) synthesisedCheck.checked = this.config.synthesised;
-
-        // Set price
-        const priceMin = document.getElementById('priceMin');
-        if (priceMin) priceMin.value = this.config.price.min || '';
-        
-        const priceMax = document.getElementById('priceMax');
-        if (priceMax) priceMax.value = this.config.price.max || '';
-        
-        const priceCurrency = document.getElementById('priceCurrency');
-        if (priceCurrency) priceCurrency.value = this.config.price.currency || 'chaos';
-
-        // Trigger base item change if we have one loaded
-        if (this.config.baseItem) {
-            this.onBaseItemChange();
+    performModSearch() {
+        if (!this.searchConfig.baseItem) {
+            this.showError('Please select an Abyss Jewel');
+            return;
         }
-    }
-
-    resetConfiguration() {
-        this.config = {
-            baseItem: '',
-            itemLevel: { min: null, max: null },
-            quality: { min: null, max: null },
-            corrupted: false,
-            fractured: false,
-            synthesised: false,
-            mods: [],
-            price: { min: null, max: null, currency: 'chaos' }
-        };
         
-        this.populateUIFromConfig();
-        this.updateModSelectors();
-        this.saveConfiguration();
-        this.updateStatus('🔄 Configuration reset');
+        if (this.searchConfig.selectedMods.length === 0) {
+            this.showError('Please add at least one mod to search for');
+            return;
+        }
+        
+        const url = this.processor.generateTradeUrlWithMods(this.searchConfig);
+        this.openTradeUrl(url);
     }
 
-    updateStatus(message) {
-        const statusElement = document.getElementById('status');
-        if (statusElement) {
-            statusElement.textContent = message;
-            
-            // Auto-clear success messages after 3 seconds
-            if (message.startsWith('✅')) {
-                setTimeout(() => {
-                    if (statusElement.textContent === message) {
-                        statusElement.textContent = '🎯 Ready to search';
-                    }
-                }, 3000);
-            }
-        }
+    openTradeUrl(url) {
+        chrome.tabs.create({ url: url });
+        window.close();
+    }
+
+    showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.classList.add('show');
+        
+        setTimeout(() => {
+            this.hideError();
+        }, 5000);
+    }
+
+    hideError() {
+        document.getElementById('errorMessage').classList.remove('show');
     }
 }
 
-// Initialize the UI when the popup loads
-document.addEventListener('DOMContentLoaded', () => {
-    new PoETradeExtensionUI();
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const controller = new AbyssJewelPopupController();
+        await controller.initialize();
+        window.abyssController = controller; // For debugging
+        
+        // Enable testing in console
+        window.runTests = async () => {
+            const tester = new AbyssJewelFuzzySearchTest();
+            return await tester.runAllTests();
+        };
+        
+    } catch (error) {
+        console.error('❌ Failed to initialize popup:', error);
+        const errorDiv = document.getElementById('errorMessage');
+        if (errorDiv) {
+            errorDiv.textContent = 'Failed to load data. Please refresh the extension.';
+            errorDiv.classList.add('show');
+        }
+    }
 });
