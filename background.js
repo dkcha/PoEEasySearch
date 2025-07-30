@@ -67,7 +67,63 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: false, error: 'Unknown action: ' + message.action });
 });
 
-// Handle opening new trade tab
+// Enhanced function to check if content script is ready
+async function waitForContentScript(tabId, maxAttempts = 10) {
+    console.log(`🔄 Checking if content script is ready in tab ${tabId}...`);
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            // Try to ping the content script
+            const response = await new Promise((resolve, reject) => {
+                chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+            
+            console.log(`✅ Content script is ready in tab ${tabId} (attempt ${attempt})`);
+            return true;
+            
+        } catch (error) {
+            console.log(`⏳ Content script not ready yet (attempt ${attempt}/${maxAttempts}):`, error.message);
+            
+            if (attempt < maxAttempts) {
+                // Wait before next attempt (increasing delay)
+                await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+            }
+        }
+    }
+    
+    console.warn(`⚠️ Content script not ready after ${maxAttempts} attempts`);
+    return false;
+}
+
+// Enhanced function to inject content script if needed
+async function ensureContentScript(tabId) {
+    console.log(`🔧 Ensuring content script is loaded in tab ${tabId}...`);
+    
+    try {
+        // Try to inject the content script
+        await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            files: ['content.js']
+        });
+        
+        console.log(`✅ Content script injected/ensured in tab ${tabId}`);
+        
+        // Wait a bit for script to initialize
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+    } catch (error) {
+        console.log(`ℹ️ Content script injection note for tab ${tabId}:`, error.message);
+        // This might fail if already injected, which is fine
+    }
+}
+
+// Handle opening new trade tab with enhanced error handling
 async function handleOpenTradeTab(config) {
     console.log('🌐 Creating new trade tab with config:', config);
     
@@ -83,49 +139,83 @@ async function handleOpenTradeTab(config) {
         // Wait for the tab to load, then send auto-fill message
         return new Promise((resolve, reject) => {
             let timeoutId;
+            let attempts = 0;
+            const maxAttempts = 3;
             
-            const tabUpdateListener = (tabId, changeInfo, updatedTab) => {
+            const tabUpdateListener = async (tabId, changeInfo, updatedTab) => {
                 if (tabId === tab.id && changeInfo.status === 'complete') {
-                    console.log('📄 Tab loaded, sending auto-fill message...');
+                    console.log('📄 Tab loaded, preparing auto-fill...');
                     
                     // Remove the listener and timeout
                     chrome.tabs.onUpdated.removeListener(tabUpdateListener);
                     if (timeoutId) clearTimeout(timeoutId);
                     
-                    // Small delay to ensure page is fully loaded
-                    setTimeout(() => {
-                        // Send auto-fill message to the content script
-                        chrome.tabs.sendMessage(tab.id, {
-                            action: 'autoFill',
-                            config: config
-                        }, (response) => {
-                            if (chrome.runtime.lastError) {
-                                console.error('❌ Error sending auto-fill message:', chrome.runtime.lastError.message);
+                    // Enhanced auto-fill attempt with retries
+                    const attemptAutoFill = async () => {
+                        attempts++;
+                        console.log(`🔄 Auto-fill attempt ${attempts}/${maxAttempts}...`);
+                        
+                        try {
+                            // Ensure content script is loaded
+                            await ensureContentScript(tab.id);
+                            
+                            // Wait for content script to be ready
+                            const isReady = await waitForContentScript(tab.id, 5);
+                            
+                            if (!isReady) {
+                                throw new Error('Content script not ready after multiple attempts');
+                            }
+                            
+                            // Send auto-fill message
+                            const response = await new Promise((resolve, reject) => {
+                                chrome.tabs.sendMessage(tab.id, {
+                                    action: 'autoFill',
+                                    config: config
+                                }, (response) => {
+                                    if (chrome.runtime.lastError) {
+                                        reject(new Error(chrome.runtime.lastError.message));
+                                    } else {
+                                        resolve(response);
+                                    }
+                                });
+                            });
+                            
+                            console.log('✅ Auto-fill response:', response);
+                            resolve(response || { success: true, message: 'Tab opened and auto-fill completed' });
+                            
+                        } catch (error) {
+                            console.error(`❌ Auto-fill attempt ${attempts} failed:`, error.message);
+                            
+                            if (attempts < maxAttempts) {
+                                console.log(`🔄 Retrying auto-fill in 2 seconds...`);
+                                setTimeout(attemptAutoFill, 2000);
+                            } else {
+                                console.error('❌ All auto-fill attempts failed');
                                 resolve({ 
                                     success: false, 
-                                    message: 'Tab opened but auto-fill failed: ' + chrome.runtime.lastError.message 
+                                    message: 'Tab opened but auto-fill failed after multiple attempts. Try manually refreshing the page.' 
                                 });
-                            } else {
-                                console.log('✅ Auto-fill response:', response);
-                                resolve(response || { success: true, message: 'Tab opened and auto-fill attempted' });
                             }
-                        });
-                    }, 1000);
+                        }
+                    };
+                    
+                    // Start auto-fill attempts after a short delay
+                    setTimeout(attemptAutoFill, 1500);
                 }
             };
             
             // Add listener for tab updates
             chrome.tabs.onUpdated.addListener(tabUpdateListener);
             
-            // Timeout after 10 seconds
+            // Timeout after 15 seconds
             timeoutId = setTimeout(() => {
                 chrome.tabs.onUpdated.removeListener(tabUpdateListener);
                 console.log('⏰ Timeout waiting for tab to load');
                 resolve({ 
                     success: true, 
-                    message: 'Tab opened but auto-fill timed out - try manually' 
+                    message: 'Tab opened but auto-fill timed out - try manually refreshing the page' 
                 });
-            }, 10000);
+            }, 15000);
         });
         
     } catch (error) {
@@ -151,6 +241,16 @@ async function handleAutoFillCurrentTab(config) {
         // Check if it's a PoE trade site tab
         if (!tab.url || !tab.url.includes('pathofexile.com/trade')) {
             throw new Error('Current tab is not the PoE trade site. Please navigate to pathofexile.com/trade first.');
+        }
+        
+        // Ensure content script is loaded
+        await ensureContentScript(tab.id);
+        
+        // Wait for content script to be ready
+        const isReady = await waitForContentScript(tab.id);
+        
+        if (!isReady) {
+            throw new Error('Content script not ready. Try refreshing the page.');
         }
         
         // Send auto-fill message to content script

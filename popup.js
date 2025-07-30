@@ -321,11 +321,7 @@ function attachEventListeners() {
             console.log('✅ Jewel type listener attached');
         }
         
-        // Search mode toggle  
-        if (elements.searchMode) {
-            elements.searchMode.addEventListener('change', handleSearchModeChange);
-            console.log('✅ Search mode listener attached');
-        }
+        // REMOVED: Search mode toggle - no longer needed since mode is auto-detected
         
         // Mod search input - THIS IS THE KEY ONE FOR YOUR ISSUE
         if (elements.modSearch) {
@@ -417,9 +413,6 @@ function handleJewelTypeChange(event) {
         showStatusMessage(`Selected ${JEWEL_TYPE_CONFIG[currentJewelType].displayName}`, 'success');
     }
 }
-
-// Handle search mode change (removed - no longer needed)
-// Search mode is now automatically determined by whether mods are selected
 
 // Handle mod search input - THIS IS THE CRITICAL FUNCTION
 function handleModSearchInput(event) {
@@ -626,9 +619,12 @@ function addSelectedMod(mod, tier, tierData) {
         // Update existing mod
         selectedMods[existingIndex] = {
             key: mod.key,
+            modName: mod.name, // Changed from 'name' to 'modName' for content.js compatibility
             name: mod.name,
             tier: tier,
             tierData: tierData,
+            minValue: tierData.min, // Add these for content.js compatibility
+            maxValue: tierData.max,
             statId: mod.statId,
             category: mod.category
         };
@@ -636,9 +632,12 @@ function addSelectedMod(mod, tier, tierData) {
         // Add new mod
         selectedMods.push({
             key: mod.key,
+            modName: mod.name, // Changed from 'name' to 'modName' for content.js compatibility
             name: mod.name,
             tier: tier,
             tierData: tierData,
+            minValue: tierData.min, // Add these for content.js compatibility
+            maxValue: tierData.max,
             statId: mod.statId,
             category: mod.category
         });
@@ -724,7 +723,7 @@ async function handleAutoFill() {
     }
     
     // Automatically determine search mode based on selected mods
-    const searchMode = selectedMods.length > 0 ? 'withMods' : 'baseOnly';
+    const searchMode = selectedMods.length > 0 ? 'with-mods' : 'base-only';
     
     const config = {
         jewelType: currentJewelType,
@@ -735,6 +734,7 @@ async function handleAutoFill() {
     };
     
     console.log(`🎯 Auto-fill config: ${searchMode} with ${selectedMods.length} mods`);
+    console.log('📋 Selected mods for auto-fill:', selectedMods);
     showStatusMessage('Opening trade site...', 'info');
     
     try {
@@ -803,7 +803,7 @@ window.debugUI = function() {
     console.log('🧪 Debug UI state:');
     console.log('- Current jewel type:', currentJewelType);
     console.log('- Selected mods:', selectedMods.length);
-    console.log('- Auto search mode:', selectedMods.length > 0 ? 'withMods' : 'baseOnly');
+    console.log('- Auto search mode:', selectedMods.length > 0 ? 'with-mods' : 'base-only');
     console.log('- Elements found:', Object.keys(elements).filter(key => elements[key]));
     console.log('- Elements missing:', Object.keys(elements).filter(key => !elements[key]));
     
@@ -817,7 +817,7 @@ window.debugUI = function() {
     return {
         currentJewelType,
         selectedMods: selectedMods.length,
-        autoSearchMode: selectedMods.length > 0 ? 'withMods' : 'baseOnly',
+        autoSearchMode: selectedMods.length > 0 ? 'with-mods' : 'base-only',
         elementsFound: Object.keys(elements).filter(key => elements[key]),
         elementsMissing: Object.keys(elements).filter(key => !elements[key]),
         searchInput: {
