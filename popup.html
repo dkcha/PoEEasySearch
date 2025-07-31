@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PoE Trade Helper</title>
     <style>
-        /* PoE-themed styling */
         body {
             width: 400px;
             min-height: 500px;
@@ -243,7 +242,6 @@
             border: 1px solid #17a2b8;
         }
 
-        /* Tier Modal Styles */
         .tier-modal {
             display: none;
             position: fixed;
@@ -323,7 +321,6 @@
             background: #666;
         }
 
-        /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -340,8 +337,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #666;
         }
-
-
     </style>
 </head>
 <body>
@@ -350,7 +345,6 @@
         <p>Abyss Jewels Edition</p>
     </div>
 
-    <!-- Jewel Type Selection -->
     <div class="form-group">
         <label for="jewelType">Select Jewel Type:</label>
         <select id="jewelType">
@@ -358,9 +352,6 @@
         </select>
     </div>
 
-
-
-    <!-- Mod Search Section -->
     <div class="search-section">
         <div class="form-group">
             <label for="modSearch">Search for Mods:</label>
@@ -370,7 +361,6 @@
         <div id="searchResults" class="search-results"></div>
     </div>
 
-    <!-- Selected Mods -->
     <div class="form-group">
         <label>Selected Mods:</label>
         <div id="selectedMods" class="selected-mods">
@@ -378,13 +368,10 @@
         </div>
     </div>
 
-    <!-- Auto-Fill Button -->
     <button id="autoFillBtn" class="auto-fill-btn" disabled>Select Jewel Type</button>
 
-    <!-- Status Message -->
     <div id="statusMessage" class="status-message"></div>
 
-    <!-- Tier Selection Modal -->
     <div id="tierModal" class="tier-modal">
         <div class="tier-modal-content">
             <div class="tier-modal-header">Select Tier</div>
