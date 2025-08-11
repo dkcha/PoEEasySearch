@@ -1,385 +1,500 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PoE Trade Helper</title>
     <style>
-        body {
-            width: 400px;
-            min-height: 500px;
-            margin: 0;
-            padding: 16px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
-            color: #e0e0e0;
-            font-size: 14px;
-        }
+      body {
+        width: 400px;
+        min-height: 500px;
+        margin: 0;
+        padding: 16px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+        color: #e0e0e0;
+        font-size: 14px;
+      }
 
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #d4af37;
-            padding-bottom: 12px;
-        }
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #d4af37;
+        padding-bottom: 12px;
+      }
 
-        .header h1 {
-            margin: 0;
-            color: #d4af37;
-            font-size: 18px;
-            font-weight: bold;
-        }
+      .header h1 {
+        margin: 0;
+        color: #d4af37;
+        font-size: 18px;
+        font-weight: bold;
+      }
 
-        .header p {
-            margin: 4px 0 0 0;
-            color: #a0a0a0;
-            font-size: 12px;
-        }
+      .header p {
+        margin: 4px 0 0 0;
+        color: #a0a0a0;
+        font-size: 12px;
+      }
 
-        .form-group {
-            margin-bottom: 16px;
-        }
+      .form-group {
+        margin-bottom: 16px;
+      }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            color: #d4af37;
-            font-weight: bold;
-            font-size: 13px;
-        }
+      .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #d4af37;
+        font-weight: bold;
+        font-size: 13px;
+      }
 
-        select, input[type="text"] {
-            width: 100%;
-            padding: 8px 12px;
-            border: 2px solid #555;
-            border-radius: 4px;
-            background: #333;
-            color: #e0e0e0;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
+      select,
+      input[type="text"] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 2px solid #555;
+        border-radius: 4px;
+        background: #333;
+        color: #e0e0e0;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
 
-        select:focus, input[type="text"]:focus {
-            outline: none;
-            border-color: #d4af37;
-            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
-        }
+      select:focus,
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #d4af37;
+        box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+      }
 
-        select:disabled, input[type="text"]:disabled {
-            background: #222;
-            color: #666;
-            cursor: not-allowed;
-        }
+      select:disabled,
+      input[type="text"]:disabled {
+        background: #222;
+        color: #666;
+        cursor: not-allowed;
+      }
 
-        .search-section {
-            border: 1px solid #555;
-            border-radius: 6px;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            margin-bottom: 16px;
-        }
+      .search-section {
+        border: 1px solid #555;
+        border-radius: 6px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.3);
+        margin-bottom: 16px;
+      }
 
-        .search-results {
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #444;
-            border-radius: 4px;
-            background: #2a2a2a;
-            margin-top: 8px;
-        }
+      .search-results {
+        max-height: 150px;
+        overflow-y: auto;
+        border: 1px solid #444;
+        border-radius: 4px;
+        background: #2a2a2a;
+        margin-top: 8px;
+      }
 
-        .search-result {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #444;
-            transition: background-color 0.2s;
-        }
+      .search-result {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #444;
+        transition: background-color 0.2s;
+      }
 
-        .search-result:hover {
-            background: #3a3a3a;
-        }
+      .search-result:hover {
+        background: #3a3a3a;
+      }
 
-        .search-result:last-child {
-            border-bottom: none;
-        }
+      .search-result:last-child {
+        border-bottom: none;
+      }
 
-        .mod-name {
-            color: #e0e0e0;
-            font-weight: bold;
-        }
+      .mod-name {
+        color: #e0e0e0;
+        font-weight: bold;
+      }
 
-        .confidence {
-            color: #d4af37;
-            font-size: 12px;
-            margin-left: 8px;
-        }
+      .confidence {
+        color: #d4af37;
+        font-size: 12px;
+        margin-left: 8px;
+      }
 
-        .category {
-            color: #a0a0a0;
-            font-size: 11px;
-            margin-left: 8px;
-        }
+      .category {
+        color: #a0a0a0;
+        font-size: 11px;
+        margin-left: 8px;
+      }
 
-        .no-results {
-            padding: 12px;
-            text-align: center;
-            color: #888;
-            font-style: italic;
-        }
+      .no-results {
+        padding: 12px;
+        text-align: center;
+        color: #888;
+        font-style: italic;
+      }
 
-        .selected-mods {
-            min-height: 100px;
-            max-height: 150px;
-            overflow-y: auto;
-            border: 2px solid #444;
-            border-radius: 4px;
-            background: #2a2a2a;
-            padding: 8px;
-        }
+      .selected-mods {
+        min-height: 100px;
+        max-height: 150px;
+        overflow-y: auto;
+        border: 2px solid #444;
+        border-radius: 4px;
+        background: #2a2a2a;
+        padding: 8px;
+      }
 
-        .selected-mod {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 8px;
-            margin-bottom: 4px;
-            background: #3a3a3a;
-            border-radius: 3px;
-            border-left: 3px solid #d4af37;
-        }
+      .selected-mod {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+        margin-bottom: 4px;
+        background: #3a3a3a;
+        border-radius: 3px;
+        border-left: 3px solid #d4af37;
+      }
 
-        .mod-info {
-            flex: 1;
-        }
+      .mod-info {
+        flex: 1;
+      }
 
-        .mod-tier {
-            color: #d4af37;
-            font-weight: bold;
-            margin-left: 8px;
-        }
+      .mod-tier {
+        color: #d4af37;
+        font-weight: bold;
+        margin-left: 8px;
+      }
 
-        .mod-range {
-            color: #a0a0a0;
-            font-size: 12px;
-            margin-left: 4px;
-        }
+      .mod-range {
+        color: #a0a0a0;
+        font-size: 12px;
+        margin-left: 4px;
+      }
 
-        .remove-mod {
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            line-height: 1;
-        }
+      .remove-mod {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        line-height: 1;
+      }
 
-        .remove-mod:hover {
-            background: #c82333;
-        }
+      .remove-mod:hover {
+        background: #c82333;
+      }
 
-        .no-mods {
-            padding: 20px;
-            text-align: center;
-            color: #888;
-            font-style: italic;
-        }
+      .no-mods {
+        padding: 20px;
+        text-align: center;
+        color: #888;
+        font-style: italic;
+      }
 
-        .auto-fill-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
-            color: #1a1a1a;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 12px;
-        }
+      .auto-fill-btn {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
+        color: #1a1a1a;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 12px;
+      }
 
-        .auto-fill-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #e6c55a 0%, #d4af37 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
-        }
+      .auto-fill-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #e6c55a 0%, #d4af37 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
+      }
 
-        .auto-fill-btn:disabled {
-            background: #555;
-            color: #888;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
+      .auto-fill-btn:disabled {
+        background: #555;
+        color: #888;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
 
-        .status-message {
-            padding: 8px 12px;
-            border-radius: 4px;
-            text-align: center;
-            font-size: 13px;
-            margin-top: 8px;
-        }
+      .status-message {
+        padding: 8px 12px;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 13px;
+        margin-top: 8px;
+      }
 
-        .status-message.success {
-            background: rgba(40, 167, 69, 0.2);
-            color: #28a745;
-            border: 1px solid #28a745;
-        }
+      .status-message.success {
+        background: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+        border: 1px solid #28a745;
+      }
 
-        .status-message.error {
-            background: rgba(220, 53, 69, 0.2);
-            color: #dc3545;
-            border: 1px solid #dc3545;
-        }
+      .status-message.error {
+        background: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+        border: 1px solid #dc3545;
+      }
 
-        .status-message.info {
-            background: rgba(23, 162, 184, 0.2);
-            color: #17a2b8;
-            border: 1px solid #17a2b8;
-        }
+      .status-message.info {
+        background: rgba(23, 162, 184, 0.2);
+        color: #17a2b8;
+        border: 1px solid #17a2b8;
+      }
 
-        .tier-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            justify-content: center;
-            align-items: center;
-        }
+      .tier-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        justify-content: center;
+        align-items: center;
+      }
 
-        .tier-modal-content {
-            background: #2c2c2c;
-            border: 2px solid #d4af37;
-            border-radius: 8px;
-            padding: 20px;
-            width: 300px;
-            max-width: 90%;
-        }
+      .tier-modal-content {
+        background: #2c2c2c;
+        border: 2px solid #d4af37;
+        border-radius: 8px;
+        padding: 20px;
+        width: 300px;
+        max-width: 90%;
+      }
 
-        .tier-modal-header {
-            text-align: center;
-            margin-bottom: 16px;
-            color: #d4af37;
-            font-size: 16px;
-            font-weight: bold;
-        }
+      .tier-modal-header {
+        text-align: center;
+        margin-bottom: 16px;
+        color: #d4af37;
+        font-size: 16px;
+        font-weight: bold;
+      }
 
-        .tier-options {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
+      .tier-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
 
-        .tier-option {
-            padding: 12px;
-            background: #3a3a3a;
-            color: #e0e0e0;
-            border: 2px solid #555;
-            border-radius: 4px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-        }
+      .tier-option {
+        padding: 12px;
+        background: #3a3a3a;
+        color: #e0e0e0;
+        border: 2px solid #555;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+      }
 
-        .tier-option:hover {
-            background: #4a4a4a;
-            border-color: #d4af37;
-        }
+      .tier-option:hover {
+        background: #4a4a4a;
+        border-color: #d4af37;
+      }
 
-        .tier-name {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 4px;
-            color: #d4af37;
-        }
+      .tier-name {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 4px;
+        color: #d4af37;
+      }
 
-        .tier-range {
-            font-size: 12px;
-            color: #a0a0a0;
-        }
+      .tier-range {
+        font-size: 12px;
+        color: #a0a0a0;
+      }
 
-        .close-modal {
-            width: 100%;
-            padding: 8px;
-            background: #555;
-            color: #e0e0e0;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+      .close-modal {
+        width: 100%;
+        padding: 8px;
+        background: #555;
+        color: #e0e0e0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
 
-        .close-modal:hover {
-            background: #666;
-        }
+      .close-modal:hover {
+        background: #666;
+      }
 
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
+      .speed-control {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 10px 0;
+      }
 
-        ::-webkit-scrollbar-track {
-            background: #2a2a2a;
-        }
+      #speedSlider {
+        flex: 1;
+        height: 6px;
+        background: #333;
+        outline: none;
+        border-radius: 3px;
+      }
 
-        ::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 3px;
-        }
+      #speedSlider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #d4af37;
+        cursor: pointer;
+        border-radius: 50%;
+        transition: transform 0.2s;
+      }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #666;
-        }
+      #speedSlider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+        box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+      }
+
+      .speed-labels {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 60px;
+      }
+
+      .speed-value {
+        color: #d4af37;
+        font-weight: bold;
+        font-size: 16px;
+      }
+
+      .speed-description {
+        color: #999;
+        font-size: 11px;
+        margin-top: 2px;
+      }
+
+      .speed-presets {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .speed-preset {
+        flex: 1;
+        padding: 6px;
+        background: #333;
+        color: #999;
+        border: 1px solid #444;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      .speed-preset:hover {
+        background: #3a3a3a;
+        color: #d4af37;
+        border-color: #555;
+      }
+
+      .speed-preset.active {
+        background: #4a4a4a;
+        color: #d4af37;
+        border-color: #d4af37;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #2a2a2a;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #666;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="header">
-        <h1>PoE Trade Helper</h1>
-        <p>Abyss Jewels Edition</p>
+      <h1>PoE Trade Helper</h1>
+      <p>Abyss Jewels Edition</p>
     </div>
 
     <div class="form-group">
-        <label for="jewelType">Select Jewel Type:</label>
-        <select id="jewelType">
-            <option value="">Select Abyss Jewel Type</option>
-        </select>
+      <label for="jewelType">Select Jewel Type:</label>
+      <select id="jewelType">
+        <option value="">Select Abyss Jewel Type</option>
+      </select>
     </div>
 
     <div class="search-section">
-        <div class="form-group">
-            <label for="modSearch">Search for Mods:</label>
-            <input type="text" id="modSearch" placeholder="Select a jewel type first" disabled>
-        </div>
-        
-        <div id="searchResults" class="search-results"></div>
+      <div class="form-group">
+        <label for="modSearch">Search for Mods:</label>
+        <input
+          type="text"
+          id="modSearch"
+          placeholder="Select a jewel type first"
+          disabled
+        />
+      </div>
+
+      <div id="searchResults" class="search-results"></div>
     </div>
 
     <div class="form-group">
-        <label>Selected Mods:</label>
-        <div id="selectedMods" class="selected-mods">
-            <div class="no-mods">No mods selected</div>
-        </div>
+      <label>Selected Mods:</label>
+      <div id="selectedMods" class="selected-mods">
+        <div class="no-mods">No mods selected</div>
+      </div>
     </div>
 
-    <button id="autoFillBtn" class="auto-fill-btn" disabled>Select Jewel Type</button>
+    <!-- Speed Control Section -->
+    <div class="form-group">
+      <label>Auto-fill Speed:</label>
+      <div class="speed-control">
+        <input
+          type="range"
+          id="speedSlider"
+          min="0.3"
+          max="1.0"
+          step="0.1"
+          value="0.5"
+        />
+        <div class="speed-labels">
+          <span class="speed-value" id="speedValue">2x</span>
+          <span class="speed-description" id="speedDesc">Fast</span>
+        </div>
+      </div>
+      <div class="speed-presets">
+        <button class="speed-preset" data-speed="0.3">3x Ultra</button>
+        <button class="speed-preset active" data-speed="0.5">2x Fast</button>
+        <button class="speed-preset" data-speed="0.7">1.4x Safe</button>
+        <button class="speed-preset" data-speed="1.0">1x Normal</button>
+      </div>
+    </div>
+
+    <button id="autoFillBtn" class="auto-fill-btn" disabled>
+      Select Jewel Type
+    </button>
 
     <div id="statusMessage" class="status-message"></div>
 
     <div id="tierModal" class="tier-modal">
-        <div class="tier-modal-content">
-            <div class="tier-modal-header">Select Tier</div>
-            <div id="tierOptions" class="tier-options"></div>
-            <button id="closeTierModal" class="close-modal">Cancel</button>
-        </div>
+      <div class="tier-modal-content">
+        <div class="tier-modal-header">Select Tier</div>
+        <div id="tierOptions" class="tier-options"></div>
+        <button id="closeTierModal" class="close-modal">Cancel</button>
+      </div>
     </div>
 
     <script src="popup.js"></script>
-</body>
+  </body>
 </html>

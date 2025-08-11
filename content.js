@@ -1,4 +1,4 @@
-// PoE Easy Search - Content Script (Refactored & Fixed)
+// PoE Easy Search - Content Script (Fixed & Refactored)
 console.log("🎯 PoE Easy Search content script loading...");
 
 // Global variables
@@ -7,14 +7,13 @@ let staticMods = null;
 let modMappings = {};
 
 // Configuration
-const POE_TRADE_CONFIG = {
+const CONFIG = {
   JEWEL_MAPPINGS: {
     murderous: "Murderous Eye Jewel",
     searching: "Searching Eye Jewel",
     hypnotic: "Hypnotic Eye Jewel",
     ghastly: "Ghastly Eye Jewel",
   },
-
   SELECTORS: {
     BASE_ITEM_SEARCH: [
       '.search-select input[type="text"]',
@@ -35,6 +34,27 @@ const POE_TRADE_CONFIG = {
       ".filter.full-span",
     ],
   },
+  GITHUB_URLS: {
+    JEWEL_MODS:
+      "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/abyss_jewel_mods.json",
+    STATIC_MODS:
+      "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/mods.json",
+  },
+};
+
+// Speed configuration - adjust this single value to control all timing
+const SPEED_MULTIPLIER = 0.5; // 0.5 = 2x faster, 0.3 = 3x faster, 1.0 = normal speed
+
+// Base timing values (in milliseconds)
+const BASE_TIMING = {
+  BETWEEN_MODS: 600, // Delay between adding different mods
+  DROPDOWN_WAIT: 400, // Wait for dropdown to populate
+  TYPING_CHAR: 30, // Delay between keystrokes
+  CLICK_DELAY: 100, // Delay after clicking
+  INPUT_FOCUS: 80, // Delay after focusing input
+  SCROLL_WAIT: 100, // Wait after scrolling
+  VERIFY_WAIT: 500, // Wait to verify element creation
+  INITIAL_WAIT: 1000, // Initial page load wait
 };
 
 // Load mod data from GitHub
@@ -43,12 +63,8 @@ async function loadModsData() {
 
   try {
     const [jewelResponse, modsResponse] = await Promise.all([
-      fetch(
-        "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/abyss_jewel_mods.json"
-      ),
-      fetch(
-        "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/mods.json"
-      ),
+      fetch(CONFIG.GITHUB_URLS.JEWEL_MODS),
+      fetch(CONFIG.GITHUB_URLS.STATIC_MODS),
     ]);
 
     abyssJewelMods = await jewelResponse.json();
@@ -64,41 +80,38 @@ async function loadModsData() {
   }
 }
 
-// Create dynamic mod mappings with weapon aliases
+// FIXED: Create proper genericized patterns from mod text
 function createDynamicModMappings() {
-  if (!abyssJewelMods || !staticMods) {
-    console.log("❌ Required mod data not loaded yet");
-    return;
-  }
+  if (!staticMods) return;
 
   modMappings = {};
   let mappingCount = 0;
 
-  // Process all abyss jewel mods
   for (const [modId, modData] of Object.entries(staticMods)) {
-    if (!modData.text || !modData.domain === "abyss_jewel") continue;
+    if (!modData.text || modData.domain !== "abyss_jewel") continue;
 
-    // Create base mapping
-    let baseText = modData.text;
-    baseText = baseText.replace(/\(\d+-\d+\)/g, "#").replace(/\d+/g, "#");
-    baseText = baseText.replace(/\s+/g, " ").trim();
+    // FIXED: Create proper genericized version (replace numbers with #)
+    const genericizedText = genericizeModText(modData.text);
 
-    modMappings[baseText] = {
+    // Use the genericized text as the primary mapping
+    modMappings[genericizedText] = {
       modId: modId,
       originalText: modData.text,
-      searchTerms: [
-        modData.text,
-        baseText,
-        modData.name || "",
-        modData.type || "",
-      ].filter(Boolean),
+      searchText: genericizedText,
+      stats: modData.stats,
+      required_level: modData.required_level,
       ...modData,
     };
     mappingCount++;
 
-    // Create weapon aliases only for specific weapon mods
-    if (modData.adds_tags && modData.adds_tags.includes("specific_weapon")) {
-      const weaponAliases = createWeaponAliases(baseText, modData);
+    // FIXED: Add common keyword aliases for important mods
+    createKeywordAliases(modData, genericizedText, modMappings);
+
+    // Create weapon aliases for weapon-specific mods
+    if (
+      modData.text.match(/(dagger|claw|sword|axe|mace|scepter|staff|bow|wand)/i)
+    ) {
+      const weaponAliases = createWeaponAliases(modData, genericizedText);
       Object.assign(modMappings, weaponAliases);
       mappingCount += Object.keys(weaponAliases).length;
     }
@@ -107,8 +120,83 @@ function createDynamicModMappings() {
   console.log(`✅ Created ${mappingCount} dynamic mod mappings`);
 }
 
-// Create weapon aliases with damage type preservation
-function createWeaponAliases(baseText, modData) {
+// FIXED: Create keyword aliases for common searches
+function createKeywordAliases(modData, genericizedText, mappings) {
+  const text = modData.text.toLowerCase();
+
+  // Life mod aliases
+  if (text.includes("maximum life") && !text.includes("regenerate")) {
+    mappings["added life"] = { ...modData, searchText: genericizedText };
+    mappings["life"] = { ...modData, searchText: genericizedText };
+    mappings["+# to maximum life"] = {
+      ...modData,
+      searchText: genericizedText,
+    };
+  }
+
+  // Life regeneration aliases
+  if (text.includes("regenerate") && text.includes("life")) {
+    mappings["life regeneration"] = { ...modData, searchText: genericizedText };
+    mappings["life regen"] = { ...modData, searchText: genericizedText };
+    mappings["regenerate # life per second"] = {
+      ...modData,
+      searchText: genericizedText,
+    };
+  }
+
+  // Mana mod aliases
+  if (text.includes("maximum mana")) {
+    mappings["added mana"] = { ...modData, searchText: genericizedText };
+    mappings["mana"] = { ...modData, searchText: genericizedText };
+    mappings["+# to maximum mana"] = {
+      ...modData,
+      searchText: genericizedText,
+    };
+  }
+
+  // Energy shield aliases
+  if (text.includes("maximum energy shield")) {
+    mappings["added energy shield"] = {
+      ...modData,
+      searchText: genericizedText,
+    };
+    mappings["energy shield"] = { ...modData, searchText: genericizedText };
+    mappings["+# to maximum energy shield"] = {
+      ...modData,
+      searchText: genericizedText,
+    };
+  }
+
+  // Resistance aliases
+  if (text.includes("resistance")) {
+    const resistType = text.match(/(fire|cold|lightning|chaos)/);
+    if (resistType) {
+      mappings[`${resistType[1]} resistance`] = {
+        ...modData,
+        searchText: genericizedText,
+      };
+      mappings[`+#% to ${resistType[1]} resistance`] = {
+        ...modData,
+        searchText: genericizedText,
+      };
+    }
+  }
+}
+
+// FIXED: Proper mod text genericization
+function genericizeModText(modText) {
+  // Replace parenthetical ranges like (14-15) with #
+  let genericized = modText.replace(/\(\d+-\d+\)/g, "#");
+  // Replace standalone numbers with #
+  genericized = genericized.replace(/\b\d+\b/g, "#");
+  // Clean up multiple spaces
+  genericized = genericized.replace(/\s+/g, " ").trim();
+
+  return genericized;
+}
+
+// FIXED: Create weapon aliases using genericized text
+function createWeaponAliases(modData, genericizedText) {
   const aliases = {};
   const weaponTypes = [
     "dagger",
@@ -123,17 +211,18 @@ function createWeaponAliases(baseText, modData) {
   ];
 
   for (const weaponType of weaponTypes) {
-    if (baseText.toLowerCase().includes(weaponType)) {
+    if (modData.text.toLowerCase().includes(weaponType)) {
       const aliasWeapons = getWeaponAliases(weaponType);
 
       for (const alias of aliasWeapons) {
         if (alias !== weaponType) {
-          const aliasText = baseText.replace(
+          const aliasPattern = genericizedText.replace(
             new RegExp(weaponType, "gi"),
             alias
           );
-          aliases[aliasText] = {
-            ...(modMappings[baseText] || modData),
+          aliases[aliasPattern] = {
+            ...modData,
+            searchText: aliasPattern,
             isAlias: true,
             originalWeapon: weaponType,
             aliasWeapon: alias,
@@ -165,146 +254,163 @@ function getWeaponAliases(weaponType) {
   return [weaponType];
 }
 
-// Enhanced mod finder with damage type preservation
+// FIXED: Enhanced mod finder with exact keyword matching
 function findDynamicMapping(searchTerm) {
   if (!modMappings) return null;
 
-  // Extract damage type and weapon type
-  const damageTypeMatch = searchTerm.match(
-    /(physical|fire|cold|lightning|chaos)/i
-  );
-  const damageType = damageTypeMatch ? damageTypeMatch[1].toLowerCase() : null;
+  console.log(`🔍 Finding mapping for: "${searchTerm}"`);
 
-  const weaponTypeMatch = searchTerm.match(
-    /(dagger|claw|sword|axe|mace|scepter|staff|bow|wand)/i
-  );
-  const weaponType = weaponTypeMatch ? weaponTypeMatch[1].toLowerCase() : null;
+  // FIXED: Try exact keyword match first (for "added life" etc.)
+  const lowerSearchTerm = searchTerm.toLowerCase();
+  if (modMappings[lowerSearchTerm]) {
+    console.log(`✅ Exact keyword match found: "${lowerSearchTerm}"`);
+    return modMappings[lowerSearchTerm].searchText;
+  }
 
-  console.log(
-    `🔍 Detected weapon type search: ${weaponType} in "${searchTerm}"`
-  );
+  // Then try genericized search term
+  const genericizedSearchTerm = genericizeModText(searchTerm);
+  console.log(`🔄 Genericized search term: "${genericizedSearchTerm}"`);
 
-  // Look for exact match first (preserving damage type)
-  for (const [mappedText, modData] of Object.entries(modMappings)) {
-    if (!modData.searchTerms) continue;
+  // Try exact match on genericized text
+  if (modMappings[genericizedSearchTerm]) {
+    console.log(`✅ Exact genericized match found: "${genericizedSearchTerm}"`);
+    return genericizedSearchTerm;
+  }
 
-    const mappingHasWeapon = weaponType
-      ? modData.searchTerms.some((term) =>
-          term.toLowerCase().includes(weaponType)
-        )
-      : true;
+  // Fuzzy matching with scoring
+  let bestMatch = null;
+  let bestScore = 0;
 
-    const mappingHasDamageType = damageType
-      ? modData.searchTerms.some((term) =>
-          term.toLowerCase().includes(damageType)
-        )
-      : true;
+  const damageType = extractDamageType(searchTerm.toLowerCase());
+  const weaponType = extractWeaponType(searchTerm.toLowerCase());
 
-    if (mappingHasWeapon && mappingHasDamageType) {
-      console.log(`✅ Found dynamic mapping for: ${searchTerm}`);
-      return mappedText;
+  for (const [pattern, modData] of Object.entries(modMappings)) {
+    let score = calculateMatchScore(
+      genericizedSearchTerm,
+      pattern,
+      damageType,
+      weaponType
+    );
+
+    if (score > bestScore && score >= 60) {
+      bestScore = score;
+      bestMatch = modData.searchText;
     }
   }
 
-  // If no exact match found with damage type, try weapon aliases (only if no damage type)
-  if (!damageType && weaponType) {
-    const weaponAliases = getWeaponAliases(weaponType);
+  if (bestMatch) {
+    console.log(
+      `✅ Fuzzy match found: "${searchTerm}" → "${bestMatch}" (score: ${bestScore})`
+    );
+    return bestMatch;
+  }
 
-    for (const aliasWeapon of weaponAliases) {
-      for (const [mappedText, modData] of Object.entries(modMappings)) {
-        if (!modData.searchTerms) continue;
+  console.log(`❌ No suitable mapping found for: "${searchTerm}"`);
+  return null;
+}
 
-        const mappingHasAlias = modData.searchTerms.some((term) =>
-          term.toLowerCase().includes(aliasWeapon)
-        );
+// Helper functions for matching
+function extractDamageType(text) {
+  const match = text.match(/(physical|fire|cold|lightning|chaos)/i);
+  return match ? match[1].toLowerCase() : null;
+}
 
-        if (mappingHasAlias) {
-          console.log(
-            `🔗 Found weapon alias match: ${mappedText} for search "${searchTerm}"`
-          );
-          return mappedText;
-        }
+function extractWeaponType(text) {
+  const match = text.match(
+    /(dagger|claw|sword|axe|mace|scepter|staff|bow|wand)s?/i
+  );
+  return match ? match[1].toLowerCase() : null;
+}
+
+function calculateMatchScore(searchTerm, pattern, damageType, weaponType) {
+  let score = 0;
+
+  const lowerSearchTerm = searchTerm.toLowerCase();
+  const lowerPattern = pattern.toLowerCase();
+
+  // Exact match gets highest score
+  if (lowerPattern === lowerSearchTerm) return 100;
+
+  // Contains match
+  if (
+    lowerPattern.includes(lowerSearchTerm) ||
+    lowerSearchTerm.includes(lowerPattern)
+  ) {
+    score = 80;
+  }
+
+  // Keyword matching
+  const searchWords = lowerSearchTerm.split(" ").filter((w) => w.length > 2);
+  const patternWords = lowerPattern.split(" ").filter((w) => w.length > 2);
+
+  for (const searchWord of searchWords) {
+    for (const patternWord of patternWords) {
+      if (
+        patternWord.includes(searchWord) ||
+        searchWord.includes(patternWord)
+      ) {
+        score += 10;
       }
     }
   }
 
-  return null;
+  // Bonus for exact damage type match
+  if (damageType && lowerPattern.includes(damageType)) score += 20;
+
+  // Bonus for exact weapon type match
+  if (weaponType && lowerPattern.includes(weaponType)) score += 15;
+
+  // Penalty for wrong damage type
+  if (damageType) {
+    const patternDamageType = extractDamageType(lowerPattern);
+    if (patternDamageType && patternDamageType !== damageType) score -= 50;
+  }
+
+  return score;
 }
 
-// Enhanced value extraction with proper damage range handling
+// Tier-aware value extraction (same logic as popup.js)
 function extractModValues(modData, modName) {
   console.log(`🔍 Extracting values for: ${modName}`);
 
-  if (!modData) {
-    console.log("❌ No mod data provided");
-    return { min: null, max: null };
-  }
+  if (!modData) return { min: null, max: null };
 
-  // Handle damage ranges like "(14-15) to (25-28) Added Cold Damage"
-  if (modData.text || modData.originalText) {
-    const textToCheck = modData.originalText || modData.text;
+  const textToCheck = modData.originalText || modData.text;
+  if (textToCheck) {
     console.log(`📝 Checking text: ${textToCheck}`);
 
+    // Parse full damage ranges like "(14-15) to (25-28)"
     const damageRangeMatch = textToCheck.match(
       /\((\d+)-(\d+)\)\s+to\s+\((\d+)-(\d+)\)/
     );
     if (damageRangeMatch) {
       const minLow = parseInt(damageRangeMatch[1]);
       const maxHigh = parseInt(damageRangeMatch[4]);
-
-      console.log(
-        `🎯 Found damage range: (${minLow}-${damageRangeMatch[2]}) to (${damageRangeMatch[3]}-${maxHigh})`
-      );
-      console.log(`✅ Using full range: ${minLow} to ${maxHigh}`);
-
-      return {
-        min: minLow,
-        max: maxHigh,
-      };
+      console.log(`🎯 Found damage range: ${minLow} to ${maxHigh}`);
+      return { min: minLow, max: maxHigh };
     }
 
-    // Handle single ranges like "(17-20)"
+    // Parse single ranges like "(36-40)"
     const singleRangeMatch = textToCheck.match(/\((\d+)-(\d+)\)/);
     if (singleRangeMatch) {
       const min = parseInt(singleRangeMatch[1]);
       const max = parseInt(singleRangeMatch[2]);
 
-      const isPerMinute = textToCheck.toLowerCase().includes("per minute");
-      if (isPerMinute) {
-        console.log(
-          `🔄 Converting per-minute to per-second: ${min}-${max} → ${Math.round(
-            min / 60
-          )}-${Math.round(max / 60)}`
-        );
+      // Convert per-minute to per-second
+      if (textToCheck.toLowerCase().includes("per minute")) {
         return { min: Math.round(min / 60), max: Math.round(max / 60) };
       }
 
-      console.log(`✅ Extracted single range: ${min}-${max}`);
+      console.log(`✅ Extracted range: ${min}-${max}`);
       return { min, max };
     }
   }
 
   // Fallback to stats array
   if (modData.stats && modData.stats.length > 0) {
-    console.log("📊 Using stats array fallback");
-
-    // For damage mods with min/max stats, combine them
-    if (modData.stats.length === 2) {
-      const minStat = modData.stats[0];
-      const maxStat = modData.stats[1];
-
-      if (minStat.id.includes("minimum") && maxStat.id.includes("maximum")) {
-        console.log(
-          `🎯 Found min/max damage stats: ${minStat.min}-${minStat.max} to ${maxStat.min}-${maxStat.max}`
-        );
-        return {
-          min: minStat.min,
-          max: maxStat.max,
-        };
-      }
-    }
-
     const firstStat = modData.stats[0];
+
+    // Handle per-minute conversions
     if (firstStat.id && firstStat.id.includes("per_minute")) {
       return {
         min: Math.round(firstStat.min / 60),
@@ -312,111 +418,126 @@ function extractModValues(modData, modName) {
       };
     }
 
-    console.log(`✅ Using first stat: ${firstStat.min}-${firstStat.max}`);
+    // Handle percentage conversions
+    if (firstStat.id && firstStat.id.includes("permyriad")) {
+      return {
+        min: Math.round(firstStat.min / 100),
+        max: Math.round(firstStat.max / 100),
+      };
+    }
+
     return { min: firstStat.min, max: firstStat.max };
   }
 
-  console.log("❌ No valid values found");
   return { min: null, max: null };
 }
 
-// Find mod data by name and tier for value extraction
+// Find mod data by name with tier-aware selection
 function findModDataByName(modName, tier = "T1") {
   if (!staticMods) return null;
 
   console.log(`🔍 Finding mod data for: ${modName} (${tier})`);
 
-  // Extract the mod type from the name
   const lowerModName = modName.toLowerCase();
   let candidates = [];
 
-  // Find all mods that match the general pattern
   for (const [modId, modData] of Object.entries(staticMods)) {
     if (!modData.text || modData.domain !== "abyss_jewel") continue;
 
     const modText = modData.text.toLowerCase();
+    let isMatch = false;
 
-    // Check if this mod matches our search criteria
-    if (
-      lowerModName.includes("cold damage") &&
-      lowerModName.includes("dagger")
-    ) {
-      if (modText.includes("cold damage") && modText.includes("dagger")) {
-        candidates.push({ modId, modData, level: modData.required_level || 0 });
-      }
+    // Specific matching logic
+    if (lowerModName.includes("life") && !lowerModName.includes("regen")) {
+      isMatch =
+        modText.includes("maximum life") && !modText.includes("regenerate");
     } else if (
       lowerModName.includes("life") &&
       lowerModName.includes("regen")
     ) {
-      if (modText.includes("regenerate") && modText.includes("life")) {
-        candidates.push({ modId, modData, level: modData.required_level || 0 });
-      }
+      isMatch = modText.includes("regenerate") && modText.includes("life");
+    } else if (lowerModName.includes("damage")) {
+      const damageType = extractDamageType(lowerModName);
+      const weaponType = extractWeaponType(lowerModName);
+      isMatch =
+        modText.includes("damage") &&
+        (!damageType || modText.includes(damageType)) &&
+        (!weaponType || modText.includes(weaponType));
     } else {
-      // General matching for other mod types
-      const matchesPattern = modData.searchTerms?.some((term) => {
-        const termLower = term.toLowerCase();
-        return (
-          termLower.includes(lowerModName) || lowerModName.includes(termLower)
-        );
-      });
+      isMatch =
+        modText.includes(lowerModName) || lowerModName.includes(modText);
+    }
 
-      if (matchesPattern) {
-        candidates.push({ modId, modData, level: modData.required_level || 0 });
-      }
+    if (isMatch) {
+      candidates.push({ modId, modData, level: modData.required_level || 0 });
     }
   }
 
-  if (candidates.length === 0) {
-    console.log(`❌ No mod candidates found for: ${modName}`);
-    return null;
-  }
+  if (candidates.length === 0) return null;
 
-  // Sort by required level (descending) to get highest tier first
+  // Sort by required level (descending) to get T1 first
   candidates.sort((a, b) => b.level - a.level);
 
-  console.log(
-    `📊 Found ${candidates.length} candidates, levels:`,
-    candidates.map((c) => c.level)
-  );
-
-  // For T1, get the highest level (first after sorting)
-  // For other tiers, we'd need more logic, but T1 is most common
   const selectedMod = candidates[0];
-
-  console.log(
-    `✅ Selected ${tier} mod: ${selectedMod.modData.text} (level ${selectedMod.level})`
-  );
+  console.log(`✅ Selected mod: ${selectedMod.modData.text}`);
   return selectedMod.modData;
 }
 
-// Create fallback mappings
+// Create enhanced fallback mappings with proper life mod support
 function createFallbackMappings() {
   modMappings = {
+    // Life mods
+    "added life": "+# to maximum Life",
+    life: "+# to maximum Life",
+    "+# to maximum life": "+# to maximum Life",
+
+    // Life regeneration
     "life regeneration": "Regenerate # Life per second",
     "life regen": "Regenerate # Life per second",
-    life: "+# to maximum Life",
+    "regenerate # life per second": "Regenerate # Life per second",
+
+    // Mana mods
+    "added mana": "+# to maximum Mana",
+    mana: "+# to maximum Mana",
+    "+# to maximum mana": "+# to maximum Mana",
+
+    // Energy shield
+    "added energy shield": "+# to maximum Energy Shield",
+    "energy shield": "+# to maximum Energy Shield",
+    "+# to maximum energy shield": "+# to maximum Energy Shield",
+
+    // Resistances
     "fire resistance": "+#% to Fire Resistance",
+    "+#% to fire resistance": "+#% to Fire Resistance",
     "cold resistance": "+#% to Cold Resistance",
+    "+#% to cold resistance": "+#% to Cold Resistance",
     "lightning resistance": "+#% to Lightning Resistance",
+    "+#% to lightning resistance": "+#% to Lightning Resistance",
+    "chaos resistance": "+#% to Chaos Resistance",
+    "+#% to chaos resistance": "+#% to Chaos Resistance",
   };
-  console.log("✅ Fallback mappings created");
+  console.log("✅ Enhanced fallback mappings created");
 }
 
-// Map mod name to trade site stat
-function mapModToTradeStat(modName) {
-  // Try dynamic mapping first
+// FIXED: Map mod name to trade site stat
+function mapModToTradeStat(modName, mod) {
+  console.log(`🔄 Mapping mod: "${modName}"`);
+
+  // First check if we have genericText or searchText from popup
+  if (mod && (mod.genericText || mod.searchText)) {
+    const genericText = mod.genericText || mod.searchText;
+    console.log(`✅ Using genericized text from popup: ${genericText}`);
+    return genericText;
+  }
+
+  // Otherwise fall back to your existing dynamic mapping
   const dynamicMapping = findDynamicMapping(modName);
   if (dynamicMapping) {
-    console.log("🔄 Mapped mod name:", modName, "→", dynamicMapping);
+    console.log(`✅ Dynamic mapping: ${modName} → ${dynamicMapping}`);
     return dynamicMapping;
   }
 
-  // Fallback to direct mapping
-  if (modMappings[modName]) {
-    return modMappings[modName];
-  }
-
-  console.log("⚠️ No stat mapping found for:", modName);
+  console.log(`⚠️ No mapping found, using original: ${modName}`);
   return modName;
 }
 
@@ -440,11 +561,10 @@ async function handleAutoFill(config) {
     console.log(
       "✅ Form prepared. Please click search manually to avoid bot detection."
     );
-
     return {
       success: true,
       message: `Successfully configured search for ${
-        POE_TRADE_CONFIG.JEWEL_MAPPINGS[config.jewelType]
+        CONFIG.JEWEL_MAPPINGS[config.jewelType]
       }`,
     };
   } catch (error) {
@@ -455,45 +575,40 @@ async function handleAutoFill(config) {
 
 // Set base item type
 async function setBaseItemType(jewelType) {
-  const displayName = POE_TRADE_CONFIG.JEWEL_MAPPINGS[jewelType];
+  const displayName = CONFIG.JEWEL_MAPPINGS[jewelType];
   if (!displayName) throw new Error(`Unknown jewel type: ${jewelType}`);
 
   const searchInput = await findElementWithFallback(
-    POE_TRADE_CONFIG.SELECTORS.BASE_ITEM_SEARCH,
+    CONFIG.SELECTORS.BASE_ITEM_SEARCH,
     5000
   );
   if (!searchInput) throw new Error("Could not find base item search field");
 
-  console.log("✅ Found base item search field:", searchInput.tagName);
   await interactWithVueMultiselect(searchInput, displayName);
-  console.log("✅ Base item type set successfully:", displayName);
+  console.log("✅ Base item type set:", displayName);
 }
 
-// Interact with Vue multiselect
+// Interact with Vue multiselect with faster timing
 async function interactWithVueMultiselect(input, searchText) {
-  console.log("🔍 Interacting with Vue multiselect for:", searchText);
-
   input.focus();
   input.click();
-  await wait(300);
+  await delays.click();
 
   input.value = "";
   await simulateTyping(input, searchText);
-  await wait(800);
+  await delays.dropdown();
 
   const optionSelected = await selectVueMultiselectOption(searchText);
   if (!optionSelected) {
     input.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
-    await wait(300);
+    await delays.click();
   }
 }
 
 // Select Vue multiselect option
 async function selectVueMultiselectOption(targetText) {
-  console.log("🔍 Looking for Vue multiselect option:", targetText);
-
   const options = document.querySelectorAll(".multiselect__option");
   for (const option of options) {
     const optionText = option.textContent.trim();
@@ -507,7 +622,7 @@ async function selectVueMultiselectOption(targetText) {
   return false;
 }
 
-// Add mod filters
+// Add mod filters with optimized timing
 async function addModFilters(selectedMods) {
   for (let i = 0; i < selectedMods.length; i++) {
     const mod = selectedMods[i];
@@ -515,102 +630,272 @@ async function addModFilters(selectedMods) {
 
     try {
       await addSingleModFilter(mod, i);
-      await wait(1000 + Math.random() * 2000); // Random delay 1-3 seconds
+      await delays.betweenMods(); // Clean and semantic
     } catch (error) {
       console.error(`❌ Failed to add mod ${mod.modName}:`, error);
     }
   }
 }
 
-// Add single mod filter
+/**
+ * Enhanced addSingleModFilter to handle weapon group mods
+ */
 async function addSingleModFilter(mod, filterIndex) {
-  const statFilterSection = await findElementWithFallback(
-    POE_TRADE_CONFIG.SELECTORS.STAT_FILTER_SECTION,
-    5000
+  console.log(`🔄 Creating stat filter ${filterIndex + 1} for: ${mod.modName}`);
+
+  // Check if this is a weapon group mod
+  const isWeaponGroup = mod.isWeaponGroup && mod.allGenericTexts;
+
+  // Find Add Stat Filter control (your existing code)
+  let addStatButton = null;
+  const statFiltersPanel = document.querySelector(
+    ".search-advanced-pane.brown"
   );
-  if (!statFilterSection) throw new Error("Could not find stat filter section");
 
-  console.log("✅ Found stat filter section");
-
-  const addStatInput = await findElementWithFallback(
-    POE_TRADE_CONFIG.SELECTORS.ADD_STAT_INPUT,
-    3000
-  );
-  if (!addStatInput) throw new Error('Could not find "Add Stat Filter" input');
-
-  console.log("✅ Found add stat filter input");
-
-  const tradeSiteStat = mapModToTradeStat(mod.modName);
-  addStatInput.focus();
-  await wait(200);
-
-  await simulateTyping(addStatInput, tradeSiteStat);
-  await wait(800);
-
-  const optionSelected = await selectFromVueDropdown(tradeSiteStat);
-  if (!optionSelected) {
-    addStatInput.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+  if (statFiltersPanel) {
+    addStatButton = statFiltersPanel.querySelector(
+      '[class*="add-stat"], button[class*="stat"][class*="add"], .multiselect__input[placeholder*="Add Stat Filter"], input[placeholder*="Add Stat Filter"]'
     );
-    await wait(500);
   }
 
-  await wait(1000);
-  await setModValuesInLatestFilter(mod);
+  if (!addStatButton) {
+    const allElements = document.querySelectorAll("*");
+    for (const element of allElements) {
+      if (
+        element.textContent &&
+        element.textContent.includes("Add Stat Filter")
+      ) {
+        if (element.tagName === "BUTTON" || element.tagName === "INPUT") {
+          addStatButton = element;
+          break;
+        } else {
+          const interactive = element.querySelector(
+            "button, input, .multiselect__input"
+          );
+          if (interactive) {
+            addStatButton = interactive;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!addStatButton) {
+    throw new Error('Could not find "Add Stat Filter" control');
+  }
+
+  if (isWeaponGroup) {
+    // Handle weapon group mods specially
+    console.log(
+      `🔄 Adding weapon group mod with ${mod.allGenericTexts.length} variants`
+    );
+
+    // For weapon groups, we'll use the "Count" feature on the trade site
+    // This allows searching for ANY of the weapon variants
+    await addWeaponGroupFilter(addStatButton, mod);
+  } else {
+    // Regular mod handling (your existing code)
+    const tradeSiteStat = mapModToTradeStat(mod.modName, mod);
+    console.log(`🔄 Using trade site stat: "${tradeSiteStat}"`);
+
+    // Interact with Add Stat Filter control (your existing code continues...)
+    if (addStatButton.tagName === "BUTTON") {
+      addStatButton.click();
+      await wait(400);
+
+      const statInput = document.querySelector(
+        'input[placeholder*="Add Stat Filter"], .multiselect__input:last-of-type'
+      );
+      if (statInput) {
+        await interactWithStatInput(statInput, tradeSiteStat);
+      } else {
+        throw new Error(
+          "No stat input appeared after clicking Add Stat Filter"
+        );
+      }
+    } else if (addStatButton.tagName === "INPUT") {
+      await interactWithStatInput(addStatButton, tradeSiteStat);
+    }
+
+    await wait(800);
+    const verifyFilter = await verifyStatFilterCreated(tradeSiteStat);
+    if (!verifyFilter) {
+      throw new Error("Failed to create stat filter");
+    }
+
+    await setModValuesInLatestFilter(mod);
+  }
 }
 
-// Select from Vue dropdown
-async function selectFromVueDropdown(targetText) {
-  console.log("🔍 Looking for Vue dropdown option:", targetText);
+// Interact with stat input with optimized timing
+async function interactWithStatInput(input, tradeSiteStat) {
+  input.focus();
+  input.click();
+  await wait(150); // Reduced from 300ms
 
-  const options = document.querySelectorAll(
-    ".multiselect__option:not(.multiselect__option--disabled)"
-  );
-  for (const option of options) {
+  input.value = "";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await wait(100); // Reduced from 200ms
+
+  await simulateTyping(input, tradeSiteStat);
+  await wait(600); // Reduced from 1500ms - still enough for dropdown
+
+  const optionSelected = await selectFromStatDropdown(tradeSiteStat);
+  if (!optionSelected) {
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        bubbles: true,
+        code: "Enter",
+      })
+    );
+    await wait(250); // Reduced from 500ms
+  }
+}
+
+// Select from STAT dropdown with faster timing
+async function selectFromStatDropdown(targetText) {
+  console.log("🔍 Looking for STAT dropdown option:", targetText);
+
+  await delays.dropdown();
+
+  const statDropdownSelectors = [
+    ".search-advanced-pane.brown .multiselect__option:not(.multiselect__option--disabled)",
+    '[class*="stat"] .multiselect__option:not(.multiselect__option--disabled)',
+    ".multiselect__option:not(.multiselect__option--disabled)",
+  ];
+
+  let foundOptions = [];
+
+  for (const selector of statDropdownSelectors) {
+    const options = document.querySelectorAll(selector);
+
+    const statOptions = Array.from(options).filter((option) => {
+      const optionText = option.textContent.toLowerCase();
+
+      const isItemName =
+        optionText.includes("amulet") ||
+        optionText.includes("ring") ||
+        optionText.includes("belt") ||
+        optionText.includes("boots") ||
+        optionText.match(/^\w+ \w+ \w+$/);
+
+      const isStatLike =
+        optionText.includes("damage") ||
+        optionText.includes("resistance") ||
+        optionText.includes("life") ||
+        optionText.includes("mana") ||
+        optionText.includes("#") ||
+        optionText.includes("%");
+
+      return !isItemName || isStatLike;
+    });
+
+    if (statOptions.length > 0) {
+      foundOptions = statOptions;
+      break;
+    }
+  }
+
+  if (foundOptions.length === 0) return false;
+
+  const lowerTargetText = targetText.toLowerCase();
+
+  for (const option of foundOptions.slice(0, 50)) {
+    let optionText = "";
     const spans = option.querySelectorAll("span");
-    let optionText =
-      spans.length > 0
-        ? spans[spans.length - 1].textContent.trim()
-        : option.textContent.trim();
+    if (spans.length > 0) {
+      optionText = spans[spans.length - 1].textContent.trim();
+    } else {
+      optionText = option.textContent.trim();
+    }
 
-    if (
-      optionText.toLowerCase().includes(targetText.toLowerCase()) ||
-      targetText.toLowerCase().includes(optionText.toLowerCase())
-    ) {
-      console.log("✅ Found matching option:", optionText);
+    const lowerOptionText = optionText.toLowerCase();
+
+    const isExactMatch = lowerOptionText === lowerTargetText;
+    const containsMatch =
+      lowerOptionText.includes(lowerTargetText) ||
+      lowerTargetText.includes(lowerOptionText);
+
+    const isDamageMatch =
+      lowerTargetText.includes("damage") && lowerOptionText.includes("damage");
+    const isWeaponMatch =
+      (lowerTargetText.includes("wand") && lowerOptionText.includes("wand")) ||
+      (lowerTargetText.includes("bow") && lowerOptionText.includes("bow"));
+
+    if (isExactMatch || (containsMatch && isDamageMatch && isWeaponMatch)) {
+      console.log(`✅ Found matching STAT option: "${optionText}"`);
+      option.scrollIntoView({ block: "nearest" });
+      await delays.scroll();
       option.click();
-      await wait(500);
+      await delays.click();
       return true;
     }
   }
   return false;
 }
 
-// Set values in latest filter
+// Verify stat filter creation
+async function verifyStatFilterCreated(expectedStat) {
+  await wait(1000);
+
+  const statFiltersSection = document.querySelector(
+    ".search-advanced-pane.brown"
+  );
+  if (!statFiltersSection) return false;
+
+  const statFilters = statFiltersSection.querySelectorAll(".filter.full-span");
+  if (statFilters.length === 0) return false;
+
+  const latestFilter = statFilters[statFilters.length - 1];
+  const filterText = latestFilter.textContent || "";
+
+  if (
+    filterText.toLowerCase().includes("buyout") ||
+    filterText.toLowerCase().includes("price")
+  ) {
+    return false;
+  }
+
+  const hasMinMaxInputs =
+    latestFilter.querySelector('input[placeholder="min"]') &&
+    latestFilter.querySelector('input[placeholder="max"]');
+
+  return hasMinMaxInputs;
+}
+
+// Set values in latest filter with faster timing
 async function setModValuesInLatestFilter(mod) {
   console.log("📊 Setting values for latest filter:", mod.modName);
 
-  // Find the mod data to extract correct values
-  // Pass the tier information if available
-  const tier = mod.tier || "T1"; // Default to T1 if no tier specified
+  const tier = mod.tier || "T1";
   const modData = findModDataByName(mod.modName, tier);
   const extractedValues = extractModValues(modData, mod.modName);
 
-  console.log("🎯 Extracted values:", extractedValues);
+  await wait(200); // Reduced from 500ms
 
-  const filterContainers = document.querySelectorAll(
-    ".filter-group-body .filter.full-span"
+  // Find latest stat filter
+  let latestFilter = null;
+  const statFilterContainers = document.querySelectorAll(
+    ".search-advanced-pane.brown .filter.full-span, .filter-group .filter.full-span"
   );
-  if (filterContainers.length === 0)
-    throw new Error("No filter containers found");
 
-  const latestFilter = filterContainers[filterContainers.length - 1];
-  console.log("🎯 Using latest filter container");
+  if (statFilterContainers.length > 0) {
+    latestFilter = statFilterContainers[statFilterContainers.length - 1];
+  }
 
-  const minInput = latestFilter.querySelector('input[placeholder="min"]');
-  const maxInput = latestFilter.querySelector('input[placeholder="max"]');
+  if (!latestFilter) {
+    throw new Error("No stat filter containers found");
+  }
 
-  // Use extracted values if available, otherwise fall back to mod values
+  const minInput = latestFilter.querySelector(
+    'input[placeholder="min"]:not([disabled])'
+  );
+  const maxInput = latestFilter.querySelector(
+    'input[placeholder="max"]:not([disabled])'
+  );
+
   const minValue =
     extractedValues.min !== null ? extractedValues.min : mod.minValue;
   const maxValue =
@@ -618,60 +903,59 @@ async function setModValuesInLatestFilter(mod) {
 
   if (minInput && minValue !== undefined) {
     await clearAndFillInput(minInput, minValue.toString());
-    console.log("📊 Set min value:", minValue);
+    console.log("✅ Min value set:", minValue);
   }
 
   if (maxInput && maxValue !== undefined) {
     await clearAndFillInput(maxInput, maxValue.toString());
-    console.log("📊 Set max value:", maxValue);
+    console.log("✅ Max value set:", maxValue);
   }
-
-  console.log("✅ Values set for latest filter");
 }
 
-// Simulate typing
+// Faster typing simulation
 async function simulateTyping(input, text) {
-  console.log("⌨️ Typing text:", text);
-
   input.value = "";
   input.dispatchEvent(new Event("input", { bubbles: true }));
-  await wait(100);
+  await delays.focus();
 
   for (let i = 0; i < text.length; i++) {
     input.value += text[i];
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    await wait(40 + Math.random() * 80); // Variable typing speed 40-120ms
+    await delays.typing();
   }
 
   input.dispatchEvent(new Event("change", { bubbles: true }));
-  await wait(200);
-  console.log("✅ Finished typing:", text);
+  await delays.click();
 }
 
-// Clear and fill input
+// Faster input filling with optimized timing
 async function clearAndFillInput(input, value) {
-  console.log("✏️ Filling input with:", value);
+  if (
+    input.disabled ||
+    input.closest('.currency, .currency-section, [class*="currency"]')
+  ) {
+    return;
+  }
 
   input.focus();
-  await wait(100);
+  await wait(50); // Reduced from 150ms
 
   input.select();
   input.value = "";
   input.dispatchEvent(new Event("input", { bubbles: true }));
-  await wait(100);
+  await wait(50); // Reduced from 100ms
 
   for (let i = 0; i < value.length; i++) {
     input.value += value[i];
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    await wait(50);
+    await wait(25 + Math.random() * 25); // Reduced from 50-80ms to 25-50ms
   }
 
   input.dispatchEvent(new Event("change", { bubbles: true }));
-  input.dispatchEvent(new Event("blur"));
-  console.log("✅ Input filled successfully");
+  input.dispatchEvent(new Event("blur", { bubbles: true }));
+  await wait(50); // Reduced from 100ms
 }
 
-// Utility functions
 async function findElementWithFallback(selectors, timeout = 5000) {
   const selectorArray = Array.isArray(selectors) ? selectors : [selectors];
 
@@ -725,10 +1009,26 @@ async function waitForElement(selectors, timeout = 5000) {
   return element;
 }
 
-function wait(baseMs, randomRange = 200) {
-  const randomDelay = Math.random() * randomRange;
-  return new Promise((resolve) => setTimeout(resolve, baseMs + randomDelay));
+function wait(baseMs, randomRange = 100) {
+  // Apply speed multiplier to both base and random range
+  const adjustedBase = baseMs * SPEED_MULTIPLIER;
+  const adjustedRange = randomRange * SPEED_MULTIPLIER;
+  const randomDelay = Math.random() * adjustedRange;
+  return new Promise((resolve) =>
+    setTimeout(resolve, adjustedBase + randomDelay)
+  );
 }
+
+const delays = {
+  betweenMods: () => wait(BASE_TIMING.BETWEEN_MODS, 200),
+  dropdown: () => wait(BASE_TIMING.DROPDOWN_WAIT, 100),
+  typing: () => wait(BASE_TIMING.TYPING_CHAR, 15),
+  click: () => wait(BASE_TIMING.CLICK_DELAY, 50),
+  focus: () => wait(BASE_TIMING.INPUT_FOCUS, 30),
+  scroll: () => wait(BASE_TIMING.SCROLL_WAIT, 50),
+  verify: () => wait(BASE_TIMING.VERIFY_WAIT, 100),
+  initial: () => wait(BASE_TIMING.INITIAL_WAIT, 200),
+};
 
 // Initialize content script
 if (document.readyState === "loading") {
@@ -741,7 +1041,7 @@ function initializeContentScript() {
   console.log("✅ Content script initialized");
 
   loadModsData().then(() => {
-    console.log("✅ Content script ready with dynamic mod mappings");
+    console.log("✅ Content script ready with fixed mod mappings");
   });
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -762,6 +1062,99 @@ function initializeContentScript() {
     sendResponse({ success: false, error: "Unknown action" });
   });
 }
+
+/**
+ * Add a weapon group filter using the Count feature
+ */
+async function addWeaponGroupFilter(addStatButton, mod) {
+  // We'll add each weapon variant as a separate filter in a group
+  // The trade site will treat these as OR conditions when grouped
+
+  // Click the add stat button
+  if (addStatButton.tagName === "BUTTON") {
+    addStatButton.click();
+    await wait(400);
+  }
+
+  // Use the first weapon variant to create the filter
+  const firstVariant = mod.allGenericTexts[0];
+
+  const statInput =
+    document.querySelector(
+      'input[placeholder*="Add Stat Filter"], .multiselect__input:last-of-type'
+    ) || addStatButton;
+
+  if (statInput) {
+    await interactWithStatInput(statInput, firstVariant);
+
+    await wait(800);
+
+    // Verify the filter was created
+    const verifyFilter = await verifyStatFilterCreated(firstVariant);
+    if (!verifyFilter) {
+      console.warn(
+        "⚠️ Failed to create weapon group filter, falling back to single mod"
+      );
+      return;
+    }
+
+    // Set the values for the filter
+    await setModValuesInLatestFilter(mod);
+
+    // Optional: Look for a "Count" or "Group" option to enable OR logic
+    // This depends on the trade site's current UI
+    await enableFilterGrouping();
+  }
+}
+
+/**
+ * Enable OR grouping for filters (if available on trade site)
+ */
+async function enableFilterGrouping() {
+  // Look for count/group toggle on the latest filter
+  const latestFilter = document.querySelector(
+    ".search-advanced-pane.brown .filter.full-span:last-child"
+  );
+
+  if (!latestFilter) return;
+
+  // Look for a "Count" dropdown or similar grouping option
+  const countOption = latestFilter.querySelector(
+    'select[name*="count"], button[title*="group"], .filter-group-toggle'
+  );
+
+  if (countOption) {
+    console.log("✅ Found grouping option, enabling OR logic");
+    if (countOption.tagName === "SELECT") {
+      countOption.value = "1"; // Set to "Count: 1" for OR logic
+      countOption.dispatchEvent(new Event("change", { bubbles: true }));
+    } else {
+      countOption.click();
+    }
+    await wait(200);
+  }
+}
+
+/**
+ * Alternative approach: Smart weapon detection in search
+ * This enhances your existing mapModToTradeStat function
+ */
+const originalMapModToTradeStat = mapModToTradeStat;
+mapModToTradeStat = function (modName, mod) {
+  console.log(`🔄 Mapping mod: "${modName}"`);
+
+  // Check if this is a weapon group mod
+  if (mod && mod.isWeaponGroup && mod.genericTexts) {
+    // For weapon groups, use a representative genericized text
+    // The trade site should recognize the pattern
+    const representativeText = mod.genericTexts[0];
+    console.log(`✅ Using weapon group representative: ${representativeText}`);
+    return representativeText;
+  }
+
+  // Otherwise use the original logic
+  return originalMapModToTradeStat.call(this, modName, mod);
+};
 
 // Export functions for debugging
 window.extractModValues = extractModValues;
