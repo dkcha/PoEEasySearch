@@ -555,6 +555,7 @@ async function handleAutoFill(config) {
 
     if (config.searchMode === "with-mods" && config.selectedMods?.length > 0) {
       console.log("🔍 Adding", config.selectedMods.length, "mod filters...");
+      // Make sure we're passing the full mod objects with minValue/maxValue
       await addModFilters(config.selectedMods);
     }
 
@@ -869,9 +870,26 @@ async function verifyStatFilterCreated(expectedStat) {
 async function setModValuesInLatestFilter(mod) {
   console.log("📊 Setting values for latest filter:", mod.modName);
 
-  const tier = mod.tier || "T1";
-  const modData = findModDataByName(mod.modName, tier);
-  const extractedValues = extractModValues(modData, mod.modName);
+  // CHANGE: Use the values passed from popup.js (which may be averaged)
+  // instead of extracting them from mod data
+  let minValue = mod.minValue;
+  let maxValue = mod.maxValue;
+
+  // Only fall back to extraction if values weren't provided
+  if (minValue === undefined || maxValue === undefined) {
+    console.log(
+      "⚠️ No values provided from popup, extracting from mod data..."
+    );
+    const tier = mod.tier || "T1";
+    const modData = findModDataByName(mod.modName, tier);
+    const extractedValues = extractModValues(modData, mod.modName);
+    minValue =
+      extractedValues.min !== null ? extractedValues.min : mod.minValue;
+    maxValue =
+      extractedValues.max !== null ? extractedValues.max : mod.maxValue;
+  } else {
+    console.log(`✅ Using values from popup: min=${minValue}, max=${maxValue}`);
+  }
 
   await wait(200); // Reduced from 500ms
 
@@ -895,11 +913,6 @@ async function setModValuesInLatestFilter(mod) {
   const maxInput = latestFilter.querySelector(
     'input[placeholder="max"]:not([disabled])'
   );
-
-  const minValue =
-    extractedValues.min !== null ? extractedValues.min : mod.minValue;
-  const maxValue =
-    extractedValues.max !== null ? extractedValues.max : mod.maxValue;
 
   if (minInput && minValue !== undefined) {
     await clearAndFillInput(minInput, minValue.toString());

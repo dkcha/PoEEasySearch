@@ -581,89 +581,111 @@ function findMatchingMods(query, maxResults = 10) {
     );
   });
 
-  // FIXED weapon aliases - more precise groupings
-  const weaponAliases = {
-    // Ranged weapons (bow/wand share some mods)
-    bow: ["bow", "wand"],
-    wand: ["bow", "wand"],
-    // Melee weapons (share damage mods)
-    dagger: ["dagger", "claw", "sword", "axe", "mace", "scepter"],
-    claw: ["dagger", "claw", "sword", "axe", "mace", "scepter"],
-    sword: ["dagger", "claw", "sword", "axe", "mace", "scepter"],
-    axe: ["dagger", "claw", "sword", "axe", "mace", "scepter"],
-    mace: ["dagger", "claw", "sword", "axe", "mace", "scepter"],
-    scepter: ["dagger", "claw", "sword", "axe", "mace", "scepter"],
-    // Two-handed
-    staff: ["staff", "bow"],
-  };
+  // For Searching Eye Jewel, treat bow/wand as interchangeable
+  let searchQueries = [expandedQuery];
+  if (currentJewelType === "searching") {
+    if (expandedQuery.includes("bow")) {
+      searchQueries.push(expandedQuery.replace(/\bbow(s)?\b/g, "wand$1"));
+    } else if (expandedQuery.includes("wand")) {
+      searchQueries.push(expandedQuery.replace(/\bwand(s)?\b/g, "bow$1"));
+    }
+  }
+
+  // Similarly for Murderous Eye Jewel
+  if (currentJewelType === "murderous") {
+    const meleeWeapons = [
+      "dagger",
+      "claw",
+      "sword",
+      "axe",
+      "mace",
+      "sceptre",
+      "staff",
+    ];
+    const foundWeapon = meleeWeapons.find((w) => expandedQuery.includes(w));
+
+    if (foundWeapon) {
+      meleeWeapons.forEach((weapon) => {
+        if (weapon !== foundWeapon) {
+          searchQueries.push(
+            expandedQuery.replace(
+              new RegExp(`\\b${foundWeapon}(s)?\\b`, "g"),
+              `${weapon}$1`
+            )
+          );
+        }
+      });
+    }
+  }
+
+  // Track what the user actually searched for
+  const userSearchedWeapon = expandedQuery.match(
+    /\b(bow|wand|dagger|claw|sword|axe|mace|sceptre|staff)s?\b/i
+  )?.[1];
 
   Object.entries(availableMods).forEach(([key, mod]) => {
     const modNameLower = mod.name.toLowerCase();
     const modTextLower = (mod.displayText || mod.name).toLowerCase();
     let confidence = 0;
 
-    // Direct matching
-    if (modNameLower === queryLower || modNameLower === expandedQuery) {
-      confidence = 100;
-    } else if (
-      modNameLower.startsWith(queryLower) ||
-      modNameLower.startsWith(expandedQuery)
-    ) {
-      confidence = 95;
-    } else if (
-      modNameLower.includes(queryLower) ||
-      modNameLower.includes(expandedQuery)
-    ) {
-      confidence = 85;
-    } else {
-      // Enhanced partial word matching
-      const queryWords = expandedQuery.split(" ");
-      let matchingWords = 0;
-      let hasWeaponMatch = false;
+    // Check against all search queries
+    for (const searchQuery of searchQueries) {
+      let queryConfidence = 0;
 
-      queryWords.forEach((word) => {
-        if (word.length > 2) {
+      if (modNameLower === searchQuery || modNameLower === expandedQuery) {
+        queryConfidence = 100;
+      } else if (
+        modNameLower.startsWith(searchQuery) ||
+        modNameLower.startsWith(expandedQuery)
+      ) {
+        queryConfidence = 95;
+      } else if (
+        modNameLower.includes(searchQuery) ||
+        modNameLower.includes(expandedQuery)
+      ) {
+        queryConfidence = 85;
+      } else {
+        const queryWords = searchQuery.split(" ").filter((w) => w.length > 2);
+        let matchingWords = 0;
+
+        queryWords.forEach((word) => {
           if (modNameLower.includes(word) || modTextLower.includes(word)) {
             matchingWords++;
           }
+        });
 
-          // Check for weapon alias matches
-          if (weaponAliases[word]) {
-            const weaponVariants = weaponAliases[word];
-            const hasWeaponInMod = weaponVariants.some(
-              (weapon) =>
-                modNameLower.includes(weapon) || modTextLower.includes(weapon)
-            );
-
-            if (hasWeaponInMod) {
-              matchingWords++;
-              hasWeaponMatch = true;
-            }
-          }
+        if (matchingWords > 0) {
+          queryConfidence = Math.min(
+            80,
+            (matchingWords / queryWords.length) * 80
+          );
         }
-      });
+      }
 
-      if (matchingWords > 0) {
-        confidence = Math.min(80, (matchingWords / queryWords.length) * 80);
-        if (hasWeaponMatch) confidence += 10;
+      if (queryConfidence > confidence) {
+        confidence = queryConfidence;
       }
     }
 
     if (confidence > 70) {
+      // Format display name correctly
       let displayName = mod.name;
 
-      // Enhanced display for weapon damage mods
-      const detectedWeapon = Object.keys(weaponAliases).find((weapon) =>
-        queryLower.includes(weapon)
-      );
-
-      if (detectedWeapon && modNameLower.includes("damage")) {
+      if (userSearchedWeapon) {
         const weaponCapitalized =
-          detectedWeapon.charAt(0).toUpperCase() + detectedWeapon.slice(1);
-        if (!displayName.includes(weaponCapitalized)) {
+          userSearchedWeapon.charAt(0).toUpperCase() +
+          userSearchedWeapon.slice(1);
+
+        if (currentJewelType === "searching") {
+          // Use singular form with "Attacks": "Bow Attacks" not "Bows Attacks"
           displayName = displayName.replace(
-            /damage/i,
-            `${weaponCapitalized} Damage`
+            /With (Wand|Bow)s?/gi,
+            `With ${weaponCapitalized}`
+          );
+        } else if (currentJewelType === "murderous") {
+          displayName = displayName.replace(
+            /With (Dagger|Claw|Sword|Axe|Mace|Sceptre|Staff)s?/gi,
+            `With ${weaponCapitalized}`
           );
         }
       }
@@ -676,19 +698,13 @@ function findMatchingMods(query, maxResults = 10) {
         tiers: mod.tiers,
         statId: mod.statId,
         category: mod.category,
-        isWeaponVariant: !!detectedWeapon,
+        userSearchedWeapon: userSearchedWeapon,
       });
     }
   });
 
   return results
-    .sort((a, b) => {
-      if (Math.abs(a.confidence - b.confidence) < 5) {
-        if (a.isWeaponVariant && !b.isWeaponVariant) return -1;
-        if (!a.isWeaponVariant && b.isWeaponVariant) return 1;
-      }
-      return b.confidence - a.confidence;
-    })
+    .sort((a, b) => b.confidence - a.confidence)
     .slice(0, maxResults);
 }
 
@@ -716,6 +732,26 @@ function displaySearchResults(results) {
     resultDiv.addEventListener("click", () => selectMod(result));
     elements.searchResults.appendChild(resultDiv);
   });
+}
+
+function formatWeaponModText(text, weapon) {
+  if (!text || !weapon) return text;
+
+  const weaponSingular = weapon.charAt(0).toUpperCase() + weapon.slice(1);
+
+  // For patterns like "with X Attacks", use singular
+  let formatted = text.replace(
+    /with \w+s?\s+Attacks/gi,
+    `with ${weaponSingular} Attacks`
+  );
+
+  // For other patterns without "Attacks", use plural
+  formatted = formatted.replace(
+    /with \w+s?(?!\s+Attacks)/gi,
+    `with ${weaponSingular}s`
+  );
+
+  return formatted;
 }
 
 // Clear search results
@@ -763,11 +799,111 @@ function closeTierModal() {
   }
 }
 
+/**
+ * Check if a mod is a flat added damage mod
+ * @param {string} modText - The mod text to check
+ * @returns {boolean} - True if it's a flat damage mod that should be averaged
+ */
+function isFlatAddedDamageMod(modText) {
+  if (!modText) return false;
+
+  const textLower = modText.toLowerCase();
+
+  // Check for flat damage patterns
+  const hasDamagePattern =
+    // "Adds # to # [Element] Damage"
+    (textLower.includes("adds") && textLower.includes("damage")) ||
+    // "Added [Element] Damage with/to"
+    (textLower.includes("added") && textLower.includes("damage"));
+
+  // Must be elemental or physical damage
+  const hasDamageType =
+    textLower.includes("physical") ||
+    textLower.includes("fire") ||
+    textLower.includes("cold") ||
+    textLower.includes("lightning") ||
+    textLower.includes("chaos") ||
+    textLower.includes("elemental");
+
+  // Exclude percentage mods
+  const isPercentage =
+    textLower.includes("%") ||
+    textLower.includes("increased") ||
+    textLower.includes("more") ||
+    textLower.includes("multiplier") ||
+    textLower.includes("critical strike chance");
+
+  return hasDamagePattern && hasDamageType && !isPercentage;
+}
+
+/**
+ * Calculate search values with averaging for flat damage mods
+ * @param {Object} tierData - The tier data containing min/max values
+ * @param {string} modText - The mod text to check if averaging is needed
+ * @returns {Object} - Object with min and max values for searching
+ */
+function calculateSearchValues(tierData, modText) {
+  // Check if this is a flat added damage mod
+  if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
+    // For flat damage, use average as minimum
+    const average = Math.round((tierData.min + tierData.max) / 2);
+    console.log(
+      `[Value Averaging] ${modText}: Using average ${average} instead of min ${tierData.min}`
+    );
+    return {
+      min: average,
+      max: tierData.max,
+      wasAveraged: true,
+    };
+  }
+
+  // For all other mods, use actual values
+  return {
+    min: tierData.min,
+    max: tierData.max,
+    wasAveraged: false,
+  };
+}
+
 // Add selected mod with tier
 function addSelectedMod(mod, tier, tierData) {
   const existingIndex = selectedMods.findIndex(
     (selected) => selected.key === mod.key
   );
+
+  // If user searched for a specific weapon, adjust the tier text
+  let adjustedTierData = { ...tierData };
+  if (mod.userSearchedWeapon && tierData.text) {
+    // Format the weapon name correctly (singular for "X Attacks" pattern)
+    const weaponSingular =
+      mod.userSearchedWeapon.charAt(0).toUpperCase() +
+      mod.userSearchedWeapon.slice(1);
+
+    if (currentJewelType === "searching") {
+      // Replace wand/bow with the singular form + " Attacks"
+      adjustedTierData.text = tierData.text.replace(
+        /with (Wand|Bow)s?\s+Attacks/gi,
+        `with ${weaponSingular} Attacks`
+      );
+      // Also handle other patterns that might exist
+      adjustedTierData.text = adjustedTierData.text.replace(
+        /with (Wand|Bow)s?(?!\s+Attacks)/gi,
+        `with ${weaponSingular}s`
+      );
+    } else if (currentJewelType === "murderous") {
+      // For melee weapons, similar logic
+      const meleePattern =
+        /with (Dagger|Claw|Sword|Axe|Mace|Sceptre|Staff)s?\s+Attacks/gi;
+      adjustedTierData.text = tierData.text.replace(
+        meleePattern,
+        `with ${weaponSingular} Attacks`
+      );
+    }
+  }
+
+  // Calculate search values with averaging for flat damage mods
+  const modTextForCheck = adjustedTierData.text || mod.originalName || mod.name;
+  const searchValues = calculateSearchValues(tierData, modTextForCheck);
 
   const modData = {
     key: mod.key,
@@ -775,12 +911,13 @@ function addSelectedMod(mod, tier, tierData) {
     name: mod.name,
     originalName: mod.originalName || mod.name,
     tier: tier,
-    tierData: tierData,
-    minValue: tierData.min,
-    maxValue: tierData.max,
+    tierData: adjustedTierData,
+    minValue: searchValues.min, // Use calculated value (averaged or original)
+    maxValue: searchValues.max, // Use calculated value
+    wasAveraged: searchValues.wasAveraged, // Track if averaging was applied
     statId: mod.statId,
     category: mod.category,
-    isWeaponVariant: mod.isWeaponVariant || false,
+    userSearchedWeapon: mod.userSearchedWeapon,
   };
 
   if (existingIndex !== -1) {
@@ -793,11 +930,21 @@ function addSelectedMod(mod, tier, tierData) {
   updateAutoFillButton();
   clearSearchInput();
 
-  const displayMessage = mod.isWeaponVariant
-    ? `Added ${mod.name} (${tier}) - Weapon Variant`
-    : `Added ${mod.name} (${tier})`;
+  const averageIndicator = searchValues.wasAveraged ? " (averaged)" : "";
+  showStatusMessage(
+    `Added ${mod.name} (${tier})${averageIndicator}`,
+    "success"
+  );
+}
 
-  showStatusMessage(displayMessage, "success");
+function debugModGenericization(mod) {
+  console.log("=== Mod Genericization Debug ===");
+  console.log("Mod name:", mod.name);
+  console.log("Display text:", mod.displayText);
+  console.log("Tier text:", mod.tierData?.text);
+  console.log("Searched weapon:", mod.searchedWeapon);
+  console.log("Genericized result:", getGenericizedModText(mod));
+  console.log("================================");
 }
 
 // Update selected mods display
@@ -811,18 +958,25 @@ function updateSelectedModsDisplay() {
   }
 
   elements.selectedMods.innerHTML = selectedMods
-    .map(
-      (mod, index) => `
+    .map((mod, index) => {
+      // Show actual values being used for search
+      const displayMin = mod.minValue;
+      const displayMax = mod.maxValue;
+      const avgIndicator = mod.wasAveraged
+        ? ' <span style="color: #4CAF50; font-size: 0.85em;">(avg)</span>'
+        : "";
+
+      return `
         <div class="selected-mod">
           <span class="mod-info">
             <span class="mod-name">${mod.name}</span>
             <span class="mod-tier">${mod.tier}</span>
-            <span class="mod-range">(${mod.tierData.min}-${mod.tierData.max})</span>
+            <span class="mod-range">(${displayMin}-${displayMax})${avgIndicator}</span>
           </span>
           <button class="remove-mod" onclick="removeSelectedMod(${index})">&times;</button>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -866,12 +1020,12 @@ function updateAutoFillButton() {
 
 // Get genericized mod text from the tier data
 function getGenericizedModText(mod) {
-  // If we already have the genericized text from tier data
+  // Priority 1: Use the adjusted tier text (which has user's weapon choice)
   if (mod.tierData && mod.tierData.text) {
     return genericizeModText(mod.tierData.text);
   }
 
-  // Fallback to the display text or name
+  // Fallback to other sources
   const textToGenericize = mod.displayText || mod.originalName || mod.name;
   return genericizeModText(textToGenericize);
 }
@@ -880,8 +1034,13 @@ function getGenericizedModText(mod) {
 function genericizeModText(text) {
   if (!text) return "";
 
-  // Replace damage ranges like "(14-15) to (25-28)" with "# to #"
-  let genericized = text
+  // First ensure weapon names are properly formatted
+  // "with Wands Attacks" -> "with Wand Attacks"
+  // "with Bows Attacks" -> "with Bow Attacks"
+  let formatted = text.replace(/with (\w+)s\s+Attacks/g, "with $1 Attacks");
+
+  // Now genericize the numbers
+  formatted = formatted
     .replace(
       /\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\) to \(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g,
       "# to #"
@@ -890,7 +1049,7 @@ function genericizeModText(text) {
     .replace(/\b\d+(?:\.\d+)?\b/g, "#")
     .replace(/\+#/g, "+#");
 
-  return genericized.trim();
+  return formatted.trim();
 }
 
 // Handle auto-fill action
@@ -1264,35 +1423,34 @@ handleAutoFill = async function () {
   const speedMultiplier = parseFloat(speedSlider.value) || 0.5;
   const searchMode = selectedMods.length > 0 ? "with-mods" : "base-only";
 
-  // Process mods to handle weapon groups
-  const processedMods = [];
-
-  for (const mod of selectedMods) {
-    if (mod.isWeaponGroup && mod.genericTexts) {
-      // For weapon groups, pick one representative mod for the search
-      // The trade site will handle the OR logic
-      processedMods.push({
-        ...mod,
-        genericText: mod.genericTexts[0], // Use first weapon variant
-        searchText: mod.genericTexts[0],
-        // Store all variants for potential future use
-        allGenericTexts: mod.genericTexts,
-      });
-    } else {
-      // Regular mod
-      processedMods.push({
-        ...mod,
-        genericText: getGenericizedModText(mod),
-        searchText: getGenericizedModText(mod),
-      });
-    }
-  }
-
   const config = {
     jewelType: currentJewelType,
     jewelDisplayName: JEWEL_TYPE_CONFIG[currentJewelType].displayName,
     searchMode: searchMode,
-    selectedMods: processedMods,
+    selectedMods: selectedMods.map((mod) => {
+      // Debug each mod before sending
+      if (mod.searchedWeapon) {
+        console.log(`📝 Processing ${mod.name} for ${mod.searchedWeapon}`);
+      }
+
+      const genericText = getGenericizedModText(mod);
+
+      // Verify the generic text has the correct weapon
+      if (
+        mod.searchedWeapon &&
+        !genericText.toLowerCase().includes(mod.searchedWeapon)
+      ) {
+        console.error(
+          `❌ Generic text missing weapon! Expected ${mod.searchedWeapon} in: ${genericText}`
+        );
+      }
+
+      return {
+        ...mod,
+        genericText: genericText,
+        searchText: genericText,
+      };
+    }),
     speedMultiplier: speedMultiplier,
     timestamp: Date.now(),
   };
