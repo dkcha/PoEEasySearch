@@ -3,30 +3,26 @@
   "name": "PoE Trade Helper - Abyss Jewels",
   "version": "1.0.0",
   "description": "Advanced Abyss Jewel trading helper with fuzzy search and auto-fill for Path of Exile",
-  
-  "permissions": [
-    "activeTab",
-    "tabs",
-    "storage"
-  ],
-  
+
+  "permissions": ["activeTab", "tabs", "storage"],
+
   "host_permissions": [
     "https://www.pathofexile.com/*",
     "https://raw.githubusercontent.com/*"
   ],
-  
+
   "background": {
     "service_worker": "background.js"
   },
-  
+
   "content_scripts": [
     {
       "matches": ["https://www.pathofexile.com/trade/*"],
-      "js": ["content.js"],
+      "js": ["constants.js", "content.js"],
       "run_at": "document_idle"
     }
   ],
-  
+
   "action": {
     "default_popup": "popup.html",
     "default_title": "PoE Trade Helper",
@@ -37,23 +33,21 @@
       "128": "icons/icon128.png"
     }
   },
-  
+
   "icons": {
     "16": "icons/icon16.png",
-    "32": "icons/icon32.png", 
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  
+
   "web_accessible_resources": [
     {
-      "resources": [
-        "icons/*"
-      ],
+      "resources": ["icons/*"],
       "matches": ["<all_urls>"]
     }
   ],
-  
+
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   }

@@ -1,7 +1,7 @@
-// PoE Trade Helper - Fixed Popup Script
+// PoE Trade Helper - Enhanced Popup Script with Tier Range Selection
 console.log("🎯 PoE Trade Helper - Popup script loading...");
 
-// Global variables
+// === GLOBAL STATE ===
 let currentJewelType = "";
 let selectedMods = [];
 let abyssJewelsData = null;
@@ -9,11 +9,10 @@ let abyssJewelModsData = null;
 let fullModsData = null;
 let processedMods = {};
 let jewelTypeToTagMap = {};
-
-// DOM elements
+let currentModForTierSelection = null;
 let elements = {};
 
-// Jewel type configuration
+// === CONFIGURATION ===
 const JEWEL_TYPE_CONFIG = {
   murderous: {
     displayName: "Murderous Eye Jewel",
@@ -48,15 +47,9 @@ const JEWEL_TYPE_CONFIG = {
   },
 };
 
-/**
- * Weapon type groupings - mods in the same group share tier values
- */
 const WEAPON_EQUIVALENTS = {
-  // Ranged weapons
   wand: ["wand", "bow"],
   bow: ["wand", "bow"],
-
-  // Melee weapons
   dagger: [
     "dagger",
     "claw",
@@ -105,8 +98,6 @@ const WEAPON_EQUIVALENTS = {
     "one handed mace",
     "sceptre",
   ],
-
-  // Two-handed weapons
   staff: ["staff", "two handed sword", "two handed axe", "two handed mace"],
   "two handed sword": [
     "staff",
@@ -128,7 +119,7 @@ const WEAPON_EQUIVALENTS = {
   ],
 };
 
-// Initialize the popup when DOM is loaded
+// === INITIALIZATION ===
 document.addEventListener("DOMContentLoaded", async function () {
   console.log("🚀 DOM loaded, initializing popup...");
 
@@ -148,7 +139,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 });
 
-// Load data from GitHub repository
+// === DATA LOADING ===
 async function loadDataFiles() {
   console.log("📁 Loading data files from GitHub...");
 
@@ -156,87 +147,56 @@ async function loadDataFiles() {
     "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/";
 
   try {
-    // Load all data files
     const [jewelResponse, modsResponse, fullModsResponse] = await Promise.all([
       fetch(`${GITHUB_BASE_URL}abyss_jewels.json`),
       fetch(`${GITHUB_BASE_URL}abyss_jewel_mods.json`),
       fetch(`${GITHUB_BASE_URL}mods.json`),
     ]);
 
-    if (!jewelResponse.ok)
-      throw new Error(
-        `Failed to load abyss_jewels.json: ${jewelResponse.status}`
-      );
-    if (!modsResponse.ok)
-      throw new Error(
-        `Failed to load abyss_jewel_mods.json: ${modsResponse.status}`
-      );
-    if (!fullModsResponse.ok)
-      throw new Error(`Failed to load mods.json: ${fullModsResponse.status}`);
+    if (!jewelResponse.ok || !modsResponse.ok || !fullModsResponse.ok) {
+      throw new Error("Failed to load data files");
+    }
 
     abyssJewelsData = await jewelResponse.json();
     abyssJewelModsData = await modsResponse.json();
     fullModsData = await fullModsResponse.json();
 
     console.log("✅ All data loaded successfully");
-    console.log(
-      `- Abyss Jewels: ${Object.keys(abyssJewelsData || {}).length} entries`
-    );
-    console.log(
-      `- Full Mods: ${Object.keys(fullModsData || {}).length} entries`
-    );
   } catch (error) {
     console.error("❌ Error loading data files:", error);
     throw error;
   }
 }
 
-// Process jewel data to create tag mappings
 function processJewelData() {
   Object.entries(JEWEL_TYPE_CONFIG).forEach(([key, config]) => {
-    const tagString = config.tagPattern.join(",");
-    jewelTypeToTagMap[key] = tagString;
+    jewelTypeToTagMap[key] = config.tagPattern.join(",");
   });
 }
 
-// Get available mods for a specific jewel type with REAL tier data
+// === MOD PROCESSING ===
 function getModsForJewelType(jewelType) {
-  if (!jewelType || !abyssJewelModsData || !fullModsData) {
-    return {};
-  }
-
-  const tagString = jewelTypeToTagMap[jewelType];
-  if (!tagString) {
-    console.warn(`⚠️ No tag mapping found for jewel type: ${jewelType}`);
-    return {};
-  }
+  if (!jewelType || !abyssJewelModsData || !fullModsData) return {};
 
   if (processedMods[jewelType]) {
     return processedMods[jewelType];
   }
 
-  console.log(`🔍 Loading mods for ${jewelType} with tags: ${tagString}`);
+  const tagString = jewelTypeToTagMap[jewelType];
+  if (!tagString) return {};
 
   const abyssJewelsSection = abyssJewelModsData["Abyss Jewels"];
-  if (!abyssJewelsSection) {
-    console.warn('⚠️ No "Abyss Jewels" section found in mod data');
-    return {};
-  }
+  if (!abyssJewelsSection) return {};
 
   const jewelData = abyssJewelsSection[tagString];
-  if (!jewelData) {
-    console.warn(`⚠️ No mod data found for tag combination: ${tagString}`);
-    return {};
-  }
+  if (!jewelData) return {};
 
   const mods = {};
 
-  // Process each mod category
   Object.entries(jewelData.mods || {}).forEach(([category, categoryMods]) => {
     Object.entries(categoryMods).forEach(([modKey, modVariants]) => {
       const uniqueKey = `${category}_${modKey}`.toLowerCase();
 
-      // Get REAL tier data from fullModsData
       const tiers = {};
       const sortedVariants = Object.entries(modVariants)
         .map(([variantKey, weight]) => {
@@ -248,24 +208,29 @@ function getModsForJewelType(jewelType) {
             requiredLevel: modDetails?.required_level || 1,
           };
         })
-        .sort((a, b) => (b.requiredLevel || 0) - (a.requiredLevel || 0)); // T1 = highest level
+        .sort((a, b) => (b.requiredLevel || 0) - (a.requiredLevel || 0));
 
       sortedVariants.forEach(({ variantKey, weight, modDetails }, index) => {
         const tierNum = index + 1;
         const tierKey = `T${tierNum}`;
 
-        // Extract REAL values from mod details
         let tierValues = { min: undefined, max: undefined };
 
         if (modDetails && modDetails.text) {
           tierValues = extractModValues(modDetails.text, modDetails);
+
+          // Debug logging for damage mods
+          if (
+            modDetails.text.includes("Added") &&
+            modDetails.text.includes("Damage")
+          ) {
+            console.log(
+              `[Tier Extraction Debug] ${tierKey} - Text: "${modDetails.text}", Extracted: min=${tierValues.min}, max=${tierValues.max}`
+            );
+          }
         }
 
-        // Only use fallback if extraction completely fails
         if (tierValues.min === undefined || tierValues.max === undefined) {
-          console.warn(
-            `⚠️ Failed to extract values for ${modKey} ${tierKey}, using fallback`
-          );
           tierValues = getFallbackValues(modKey, tierNum);
         }
 
@@ -295,35 +260,86 @@ function getModsForJewelType(jewelType) {
   return mods;
 }
 
-// Extract mod values from text and stats (same logic as content.js)
+// === VALUE EXTRACTION ===
 function extractModValues(modText, modDetails) {
   if (!modText || typeof modText !== "string") {
     return { min: undefined, max: undefined };
   }
 
-  // First try to extract from text
   const textValues = extractValuesFromText(modText);
+
+  // Debug logging
+  if (modText.includes("Added") && modText.includes("Damage")) {
+    console.log(`[Extract Debug] Text: "${modText}"`);
+    console.log(`[Extract Debug] Text extraction result:`, textValues);
+  }
+
   if (textValues.min !== undefined && textValues.max !== undefined) {
     return textValues;
   }
 
-  // Fallback to stats with unit conversion
+  // Fallback to stats
   if (modDetails && modDetails.stats && modDetails.stats.length > 0) {
-    return extractValuesFromStats(modDetails.stats, modText);
+    const statsValues = extractValuesFromStats(modDetails.stats, modText);
+
+    if (modText.includes("Added") && modText.includes("Damage")) {
+      console.log(`[Extract Debug] Stats fallback used:`, statsValues);
+      console.log(`[Extract Debug] Stats data:`, modDetails.stats);
+    }
+
+    return statsValues;
   }
 
   return { min: undefined, max: undefined };
 }
 
 function extractValuesFromText(text) {
-  // Handle damage ranges like "(14-15) to (25-28)" - extract full range
-  const damageRangeMatch = text.match(
+  // Handle damage ranges like "(14-15) to (25-28)"
+  // For these, we want the FULL range of possible damage added
+  const fullDamageRangeMatch = text.match(
     /\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\) to \((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)/
   );
-  if (damageRangeMatch) {
+  if (fullDamageRangeMatch) {
+    // For damage ranges, the meaningful values for searching are:
+    // - Minimum: the lowest roll of the lower bound (first number)
+    // - Maximum: the highest roll of the upper bound (last number)
     return {
-      min: parseFloat(damageRangeMatch[1]), // Lowest possible (14)
-      max: parseFloat(damageRangeMatch[4]), // Highest possible (28)
+      min: parseFloat(fullDamageRangeMatch[1]), // Lowest possible min damage
+      max: parseFloat(fullDamageRangeMatch[4]), // Highest possible max damage
+    };
+  }
+
+  // Handle partial damage ranges like "3 to (5-6)" or "(5-6) to 7"
+  // First pattern: "X to (Y-Z)" - single min value to range max
+  const partialRangeMatch1 = text.match(
+    /(\d+(?:\.\d+)?)\s+to\s+\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)/
+  );
+  if (partialRangeMatch1) {
+    return {
+      min: parseFloat(partialRangeMatch1[1]), // The single min value
+      max: parseFloat(partialRangeMatch1[3]), // The max of the range
+    };
+  }
+
+  // Second pattern: "(X-Y) to Z" - range min to single max value
+  const partialRangeMatch2 = text.match(
+    /\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)\s+to\s+(\d+(?:\.\d+)?)/
+  );
+  if (partialRangeMatch2) {
+    return {
+      min: parseFloat(partialRangeMatch2[1]), // The min of the range
+      max: parseFloat(partialRangeMatch2[3]), // The single max value
+    };
+  }
+
+  // Handle simple "X to Y" pattern (no parentheses)
+  const simpleRangeMatch = text.match(
+    /(\d+(?:\.\d+)?)\s+to\s+(\d+(?:\.\d+)?)\s+Added/
+  );
+  if (simpleRangeMatch) {
+    return {
+      min: parseFloat(simpleRangeMatch[1]),
+      max: parseFloat(simpleRangeMatch[2]),
     };
   }
 
@@ -347,9 +363,7 @@ function extractValuesFromText(text) {
 }
 
 function extractValuesFromStats(stats, modText) {
-  if (!stats || stats.length === 0) {
-    return { min: undefined, max: undefined };
-  }
+  if (!stats || stats.length === 0) return { min: undefined, max: undefined };
 
   const stat = stats[0];
   if (!stat || stat.min === undefined || stat.max === undefined) {
@@ -359,52 +373,74 @@ function extractValuesFromStats(stats, modText) {
   let min = stat.min;
   let max = stat.max;
 
-  // Apply unit conversions
+  // Debug logging for damage mods
+  if (modText && modText.includes("Added") && modText.includes("Damage")) {
+    console.log(
+      `[Stats Extraction] Original stats min: ${stat.min}, max: ${stat.max}`
+    );
+
+    // Check if there are multiple stats (for damage ranges)
+    if (stats.length > 1) {
+      console.log(`[Stats Extraction] Multiple stats found:`, stats);
+      // For damage mods with 2 stats, typically:
+      // stats[0] = minimum damage roll
+      // stats[1] = maximum damage roll
+      const stat2 = stats[1];
+      if (stat2 && stat2.min !== undefined && stat2.max !== undefined) {
+        // Use first stat's min as overall min, second stat's max as overall max
+        min = stat.min;
+        max = stat2.max;
+        console.log(
+          `[Stats Extraction] Using multi-stat values: min=${min}, max=${max}`
+        );
+      }
+    }
+  }
+
   if (stat.id) {
     const conversion = getUnitConversion(stat.id, modText);
-    min = Math.round(min * conversion);
-    max = Math.round(max * conversion);
+    if (conversion !== 1) {
+      min = Math.round(min * conversion);
+      max = Math.round(max * conversion);
+      console.log(
+        `[Stats Extraction] After conversion (factor ${conversion}): min=${min}, max=${max}`
+      );
+    }
   }
 
   return { min, max };
 }
 
 function getUnitConversion(statId, modText) {
-  // Life/Mana/ES regeneration: per_minute → per_second
   if (statId.includes("_per_minute") && modText.includes("per second")) {
     return 1 / 60;
   }
-
-  // Percentage conversions
   if (statId.includes("_permyriad") || statId.includes("_per_ten_thousand")) {
     return 1 / 100;
   }
-
   return 1;
 }
 
-// Fallback values only when extraction fails
 function getFallbackValues(modKey, tierNum) {
   const modType = modKey.toLowerCase();
 
   if (modType.includes("life")) {
     const values = [
-      { min: 36, max: 40 }, // T1
-      { min: 31, max: 35 }, // T2
-      { min: 26, max: 30 }, // T3
-      { min: 20, max: 25 }, // T4
+      { min: 36, max: 40 },
+      { min: 31, max: 35 },
+      { min: 26, max: 30 },
+      { min: 20, max: 25 },
     ];
     return values[tierNum - 1] || { min: 15, max: 19 };
   }
 
-  // Default fallback
   return {
     min: Math.max(1, 10 - (tierNum - 1) * 2),
     max: Math.max(2, 12 - (tierNum - 1) * 2),
   };
 }
 
-// Format mod key into readable name
+// === UTILITY FUNCTIONS ===
 function formatModName(modKey) {
   const customNames = {
     AbyssJewelLife: "Added Life",
@@ -420,11 +456,8 @@ function formatModName(modKey) {
     AbyssJewelMinionAttackSpeed: "Minion Attack Speed",
   };
 
-  if (customNames[modKey]) {
-    return customNames[modKey];
-  }
+  if (customNames[modKey]) return customNames[modKey];
 
-  // Default formatting
   return modKey
     .replace(/^AbyssJewel/, "")
     .replace(/([A-Z])/g, " $1")
@@ -433,7 +466,161 @@ function formatModName(modKey) {
     .trim();
 }
 
-// Initialize DOM elements
+function genericizeModText(text) {
+  if (!text) return "";
+
+  let formatted = text.replace(/with (\w+)s\s+Attacks/g, "with $1 Attacks");
+  formatted = formatted
+    .replace(
+      /\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\) to \(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g,
+      "# to #"
+    )
+    .replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "#")
+    .replace(/\b\d+(?:\.\d+)?\b/g, "#")
+    .replace(/\+#/g, "+#");
+
+  return formatted.trim();
+}
+
+// === VALUE AVERAGING LOGIC ===
+function isFlatAddedDamageMod(modText) {
+  if (!modText) return false;
+
+  const textLower = modText.toLowerCase();
+
+  const hasDamagePattern =
+    (textLower.includes("adds") && textLower.includes("damage")) ||
+    (textLower.includes("added") && textLower.includes("damage"));
+
+  const hasDamageType =
+    textLower.includes("physical") ||
+    textLower.includes("fire") ||
+    textLower.includes("cold") ||
+    textLower.includes("lightning") ||
+    textLower.includes("chaos") ||
+    textLower.includes("elemental");
+
+  const isPercentage =
+    textLower.includes("%") ||
+    textLower.includes("increased") ||
+    textLower.includes("more") ||
+    textLower.includes("multiplier") ||
+    textLower.includes("critical strike chance");
+
+  return hasDamagePattern && hasDamageType && !isPercentage;
+}
+
+function calculateSearchValues(
+  tierData,
+  modText,
+  isExactTier,
+  fromTier,
+  toTier
+) {
+  // For exact tier searches (fromTier === toTier), don't average
+  if (isExactTier) {
+    console.log(
+      `[Value Calc] Exact tier - using actual values: ${tierData.min}-${tierData.max}`
+    );
+    // For exact tier of damage mods, use the average damage as both min and max
+    if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
+      const avgDamage = Math.round((tierData.min + tierData.max) / 2);
+      console.log(
+        `[Value Calc] Exact tier damage mod - using average damage: ${avgDamage}`
+      );
+      return {
+        min: avgDamage,
+        max: avgDamage,
+        wasAveraged: true,
+      };
+    }
+    return {
+      min: tierData.min,
+      max: tierData.max,
+      wasAveraged: false,
+    };
+  }
+
+  // For range searches of damage mods, we need to search by average damage
+  if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
+    // Calculate the average damage this tier provides
+    const avgDamage = Math.round((tierData.min + tierData.max) / 2);
+    console.log(
+      `[Value Calc] Range search damage mod - fromTier avg damage: ${avgDamage}`
+    );
+
+    // The minimum for our search is the average damage of the fromTier
+    // The maximum will be calculated from the toTier in the main function
+    return {
+      min: avgDamage,
+      max: tierData.max, // This will be overridden by toTier's average
+      wasAveraged: true,
+      avgDamage: avgDamage, // Store for reference
+    };
+  }
+
+  console.log(`[Value Calc] Non-damage mod: ${tierData.min}-${tierData.max}`);
+  return {
+    min: tierData.min,
+    max: tierData.max,
+    wasAveraged: false,
+  };
+}
+
+/**
+ * Calculate a capped max value to prevent tier bleeding
+ * Only caps if it would actually help (i.e., don't make the range worse)
+ */
+function calculateCappedMaxValue(mod, toTier, toTierData) {
+  const tierKeys = Object.keys(mod.tiers);
+  const toTierIndex = tierKeys.indexOf(toTier);
+
+  // If this is the best tier (T1) or we can't find it, use the original max
+  if (toTierIndex <= 0) {
+    return toTierData.max;
+  }
+
+  // Get the next better tier (e.g., if toTier is T3, get T2)
+  const nextTierKey = tierKeys[toTierIndex - 1];
+  const nextTierData = mod.tiers[nextTierKey];
+
+  if (!nextTierData) {
+    return toTierData.max;
+  }
+
+  console.log(
+    `[Tier Capping Debug] Checking ${toTier} (max: ${toTierData.max}) vs ${nextTierKey} (min: ${nextTierData.min})`
+  );
+
+  // Only cap if:
+  // 1. There's actual overlap (next tier's min <= current tier's max)
+  // 2. The capped value would still be >= current tier's min (valid range)
+  // 3. The capped value would be less than the original max (actually helping)
+
+  if (nextTierData.min <= toTierData.max) {
+    const proposedCap = nextTierData.min - 1;
+
+    // Only use the cap if it's a valid value that's better than no cap
+    if (proposedCap >= toTierData.min && proposedCap < toTierData.max) {
+      console.log(
+        `[Tier Capping] ${toTier} max: ${toTierData.max} → capped at ${proposedCap} to avoid ${nextTierKey} items`
+      );
+      return proposedCap;
+    } else {
+      console.log(
+        `[Tier Capping] ${toTier}: Cap of ${proposedCap} would be invalid or unhelpful, using original max ${toTierData.max}`
+      );
+    }
+  } else {
+    console.log(
+      `[Tier Capping] ${toTier}: No overlap with ${nextTierKey}, using original max ${toTierData.max}`
+    );
+  }
+
+  return toTierData.max;
+}
+
+// === DOM INITIALIZATION ===
 function initializeElements() {
   const elementIds = [
     "jewelType",
@@ -443,7 +630,11 @@ function initializeElements() {
     "autoFillBtn",
     "statusMessage",
     "tierModal",
-    "tierOptions",
+    "tierModalHeader",
+    "tierFromSelect",
+    "tierToSelect",
+    "tierRangeInfo",
+    "confirmTierSelection",
     "closeTierModal",
   ];
 
@@ -455,7 +646,6 @@ function initializeElements() {
   });
 }
 
-// Attach event listeners
 function attachEventListeners() {
   if (elements.jewelType) {
     elements.jewelType.addEventListener("change", handleJewelTypeChange);
@@ -474,6 +664,21 @@ function attachEventListeners() {
     elements.closeTierModal.addEventListener("click", closeTierModal);
   }
 
+  if (elements.confirmTierSelection) {
+    elements.confirmTierSelection.addEventListener(
+      "click",
+      confirmTierSelection
+    );
+  }
+
+  if (elements.tierFromSelect) {
+    elements.tierFromSelect.addEventListener("change", updateTierRangeInfo);
+  }
+
+  if (elements.tierToSelect) {
+    elements.tierToSelect.addEventListener("change", updateTierRangeInfo);
+  }
+
   if (elements.tierModal) {
     elements.tierModal.addEventListener("click", function (e) {
       if (e.target === elements.tierModal) {
@@ -483,7 +688,6 @@ function attachEventListeners() {
   }
 }
 
-// Populate jewel dropdown
 function populateJewelDropdown() {
   if (!elements.jewelType) return;
 
@@ -498,7 +702,7 @@ function populateJewelDropdown() {
   });
 }
 
-// Handle jewel type change
+// === EVENT HANDLERS ===
 function handleJewelTypeChange(event) {
   currentJewelType = event.target.value;
   selectedMods = [];
@@ -523,7 +727,6 @@ function handleJewelTypeChange(event) {
   }
 }
 
-// Handle mod search input
 function handleModSearchInput(event) {
   const query = event.target.value.trim();
 
@@ -542,7 +745,6 @@ function handleModSearchInput(event) {
   displaySearchResults(matchingMods);
 }
 
-// Handle keydown events
 function handleModSearchKeydown(event) {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -553,7 +755,7 @@ function handleModSearchKeydown(event) {
   }
 }
 
-// Enhanced search with better weapon detection
+// === MOD SEARCH ===
 function findMatchingMods(query, maxResults = 10) {
   if (!currentJewelType) return [];
 
@@ -561,7 +763,6 @@ function findMatchingMods(query, maxResults = 10) {
   const queryLower = query.toLowerCase();
   const results = [];
 
-  // Enhanced abbreviation expansions
   const abbreviations = {
     es: "energy shield",
     hp: "life",
@@ -572,7 +773,6 @@ function findMatchingMods(query, maxResults = 10) {
     crit: "critical",
   };
 
-  // Expand abbreviations
   let expandedQuery = queryLower;
   Object.entries(abbreviations).forEach(([abbr, expansion]) => {
     expandedQuery = expandedQuery.replace(
@@ -581,8 +781,9 @@ function findMatchingMods(query, maxResults = 10) {
     );
   });
 
-  // For Searching Eye Jewel, treat bow/wand as interchangeable
   let searchQueries = [expandedQuery];
+
+  // Handle weapon interchangeability
   if (currentJewelType === "searching") {
     if (expandedQuery.includes("bow")) {
       searchQueries.push(expandedQuery.replace(/\bbow(s)?\b/g, "wand$1"));
@@ -591,7 +792,6 @@ function findMatchingMods(query, maxResults = 10) {
     }
   }
 
-  // Similarly for Murderous Eye Jewel
   if (currentJewelType === "murderous") {
     const meleeWeapons = [
       "dagger",
@@ -618,7 +818,6 @@ function findMatchingMods(query, maxResults = 10) {
     }
   }
 
-  // Track what the user actually searched for
   const userSearchedWeapon = expandedQuery.match(
     /\b(bow|wand|dagger|claw|sword|axe|mace|sceptre|staff)s?\b/i
   )?.[1];
@@ -628,7 +827,6 @@ function findMatchingMods(query, maxResults = 10) {
     const modTextLower = (mod.displayText || mod.name).toLowerCase();
     let confidence = 0;
 
-    // Check against all search queries
     for (const searchQuery of searchQueries) {
       let queryConfidence = 0;
 
@@ -668,7 +866,6 @@ function findMatchingMods(query, maxResults = 10) {
     }
 
     if (confidence > 70) {
-      // Format display name correctly
       let displayName = mod.name;
 
       if (userSearchedWeapon) {
@@ -677,7 +874,6 @@ function findMatchingMods(query, maxResults = 10) {
           userSearchedWeapon.slice(1);
 
         if (currentJewelType === "searching") {
-          // Use singular form with "Attacks": "Bow Attacks" not "Bows Attacks"
           displayName = displayName.replace(
             /With (Wand|Bow)s?/gi,
             `With ${weaponCapitalized}`
@@ -708,7 +904,7 @@ function findMatchingMods(query, maxResults = 10) {
     .slice(0, maxResults);
 }
 
-// Display search results
+// === UI UPDATES ===
 function displaySearchResults(results) {
   if (!elements.searchResults) return;
 
@@ -734,187 +930,228 @@ function displaySearchResults(results) {
   });
 }
 
-function formatWeaponModText(text, weapon) {
-  if (!text || !weapon) return text;
-
-  const weaponSingular = weapon.charAt(0).toUpperCase() + weapon.slice(1);
-
-  // For patterns like "with X Attacks", use singular
-  let formatted = text.replace(
-    /with \w+s?\s+Attacks/gi,
-    `with ${weaponSingular} Attacks`
-  );
-
-  // For other patterns without "Attacks", use plural
-  formatted = formatted.replace(
-    /with \w+s?(?!\s+Attacks)/gi,
-    `with ${weaponSingular}s`
-  );
-
-  return formatted;
-}
-
-// Clear search results
 function clearSearchResults() {
   if (elements.searchResults) {
     elements.searchResults.innerHTML = "";
   }
 }
 
-// Select mod and show tier selection
+// === TIER SELECTION MODAL ===
 function selectMod(mod) {
+  currentModForTierSelection = mod;
   showTierModal(mod);
 }
 
-// Show tier selection modal with CORRECT values
 function showTierModal(mod) {
-  if (!elements.tierModal || !elements.tierOptions) return;
+  if (!elements.tierModal || !elements.tierFromSelect || !elements.tierToSelect)
+    return;
 
-  elements.tierOptions.innerHTML = "";
+  // Update modal header
+  if (elements.tierModalHeader) {
+    elements.tierModalHeader.textContent = `Select Tier Range for "${mod.name}"`;
+  }
 
-  // Create tier options with REAL values
-  Object.entries(mod.tiers).forEach(([tier, data]) => {
-    const tierButton = document.createElement("button");
-    tierButton.className = "tier-option";
-    tierButton.innerHTML = `
-      <span class="tier-name">${tier}</span>
-      <span class="tier-range">${data.min}-${data.max}</span>
-    `;
+  // Clear and populate tier dropdowns
+  elements.tierFromSelect.innerHTML = "";
+  elements.tierToSelect.innerHTML = "";
 
-    tierButton.addEventListener("click", () => {
-      addSelectedMod(mod, tier, data);
-      closeTierModal();
-    });
+  const tierKeys = Object.keys(mod.tiers);
 
-    elements.tierOptions.appendChild(tierButton);
+  tierKeys.forEach((tier) => {
+    const tierData = mod.tiers[tier];
+
+    // From dropdown
+    const fromOption = document.createElement("option");
+    fromOption.value = tier;
+    fromOption.textContent = `${tier} (${tierData.min}-${tierData.max})`;
+    elements.tierFromSelect.appendChild(fromOption);
+
+    // To dropdown
+    const toOption = document.createElement("option");
+    toOption.value = tier;
+    toOption.textContent = `${tier} (${tierData.min}-${tierData.max})`;
+    elements.tierToSelect.appendChild(toOption);
   });
 
+  // Set default selection (T4 to T1)
+  if (tierKeys.length > 0) {
+    elements.tierFromSelect.value = tierKeys[tierKeys.length - 1]; // Usually T4
+    elements.tierToSelect.value = tierKeys[0]; // Usually T1
+  }
+
+  updateTierRangeInfo();
   elements.tierModal.style.display = "flex";
 }
 
-// Close tier modal
+function updateTierRangeInfo() {
+  if (
+    !elements.tierRangeInfo ||
+    !elements.tierFromSelect ||
+    !elements.tierToSelect
+  )
+    return;
+  if (!currentModForTierSelection) return;
+
+  const fromTier = elements.tierFromSelect.value;
+  const toTier = elements.tierToSelect.value;
+
+  // Validate selection
+  const fromIndex = parseInt(fromTier.replace("T", ""));
+  const toIndex = parseInt(toTier.replace("T", ""));
+
+  if (fromIndex < toIndex) {
+    // Invalid range (e.g., T2 to T3)
+    elements.tierToSelect.value = fromTier;
+    return;
+  }
+
+  const isExactTier = fromTier === toTier;
+  const tierData = currentModForTierSelection.tiers[fromTier];
+  const toTierData = currentModForTierSelection.tiers[toTier];
+  const modText = tierData.text || currentModForTierSelection.name;
+
+  let infoText = "";
+
+  if (isExactTier) {
+    infoText = `<span class="tier-range-highlight">Exact ${fromTier}</span> - Values: ${tierData.min}-${tierData.max}`;
+
+    if (isFlatAddedDamageMod(modText)) {
+      infoText += ` <br><small style="color: #888;">(No averaging for exact tier)</small>`;
+    }
+  } else {
+    // Calculate what the capped max will be
+    const cappedMax = calculateCappedMaxValue(
+      currentModForTierSelection,
+      toTier,
+      toTierData
+    );
+    const isCapped = cappedMax < toTierData.max;
+
+    infoText = `<span class="tier-range-highlight">${fromTier} to ${toTier}</span> - Range: ${tierData.min}-${cappedMax}`;
+
+    if (isCapped) {
+      infoText += ` <br><small style="color: #ff9800;">Max capped to avoid ${getPrevTier(
+        toTier
+      )} items</small>`;
+    }
+
+    if (isFlatAddedDamageMod(modText)) {
+      const average = Math.round((tierData.min + tierData.max) / 2);
+      infoText += ` <br><small style="color: #4CAF50;">Damage averaging: ${average}-${cappedMax}</small>`;
+    }
+  }
+
+  elements.tierRangeInfo.innerHTML = infoText;
+}
+
+function getPrevTier(tier) {
+  const tierNum = parseInt(tier.replace("T", ""));
+  return tierNum > 1 ? `T${tierNum - 1}` : "higher tier";
+}
+
+function confirmTierSelection() {
+  if (!currentModForTierSelection) return;
+
+  const fromTier = elements.tierFromSelect.value;
+  const toTier = elements.tierToSelect.value;
+
+  addSelectedModWithRange(currentModForTierSelection, fromTier, toTier);
+  closeTierModal();
+}
+
 function closeTierModal() {
   if (elements.tierModal) {
     elements.tierModal.style.display = "none";
   }
+  currentModForTierSelection = null;
 }
 
-/**
- * Check if a mod is a flat added damage mod
- * @param {string} modText - The mod text to check
- * @returns {boolean} - True if it's a flat damage mod that should be averaged
- */
-function isFlatAddedDamageMod(modText) {
-  if (!modText) return false;
-
-  const textLower = modText.toLowerCase();
-
-  // Check for flat damage patterns
-  const hasDamagePattern =
-    // "Adds # to # [Element] Damage"
-    (textLower.includes("adds") && textLower.includes("damage")) ||
-    // "Added [Element] Damage with/to"
-    (textLower.includes("added") && textLower.includes("damage"));
-
-  // Must be elemental or physical damage
-  const hasDamageType =
-    textLower.includes("physical") ||
-    textLower.includes("fire") ||
-    textLower.includes("cold") ||
-    textLower.includes("lightning") ||
-    textLower.includes("chaos") ||
-    textLower.includes("elemental");
-
-  // Exclude percentage mods
-  const isPercentage =
-    textLower.includes("%") ||
-    textLower.includes("increased") ||
-    textLower.includes("more") ||
-    textLower.includes("multiplier") ||
-    textLower.includes("critical strike chance");
-
-  return hasDamagePattern && hasDamageType && !isPercentage;
-}
-
-/**
- * Calculate search values with averaging for flat damage mods
- * @param {Object} tierData - The tier data containing min/max values
- * @param {string} modText - The mod text to check if averaging is needed
- * @returns {Object} - Object with min and max values for searching
- */
-function calculateSearchValues(tierData, modText) {
-  // Check if this is a flat added damage mod
-  if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
-    // For flat damage, use average as minimum
-    const average = Math.round((tierData.min + tierData.max) / 2);
-    console.log(
-      `[Value Averaging] ${modText}: Using average ${average} instead of min ${tierData.min}`
-    );
-    return {
-      min: average,
-      max: tierData.max,
-      wasAveraged: true,
-    };
-  }
-
-  // For all other mods, use actual values
-  return {
-    min: tierData.min,
-    max: tierData.max,
-    wasAveraged: false,
-  };
-}
-
-// Add selected mod with tier
-function addSelectedMod(mod, tier, tierData) {
+// === MOD SELECTION ===
+function addSelectedModWithRange(mod, fromTier, toTier) {
   const existingIndex = selectedMods.findIndex(
     (selected) => selected.key === mod.key
   );
 
-  // If user searched for a specific weapon, adjust the tier text
-  let adjustedTierData = { ...tierData };
-  if (mod.userSearchedWeapon && tierData.text) {
-    // Format the weapon name correctly (singular for "X Attacks" pattern)
+  const fromTierData = mod.tiers[fromTier];
+  const toTierData = mod.tiers[toTier];
+  const isExactTier = fromTier === toTier;
+
+  console.log(
+    `[Tier Selection] ${mod.name}: ${fromTier} (${fromTierData.min}-${fromTierData.max}) to ${toTier} (${toTierData.min}-${toTierData.max})`
+  );
+
+  // Adjust tier text for user's weapon choice
+  let adjustedTierData = { ...fromTierData };
+  if (mod.userSearchedWeapon && fromTierData.text) {
     const weaponSingular =
       mod.userSearchedWeapon.charAt(0).toUpperCase() +
       mod.userSearchedWeapon.slice(1);
 
     if (currentJewelType === "searching") {
-      // Replace wand/bow with the singular form + " Attacks"
-      adjustedTierData.text = tierData.text.replace(
+      adjustedTierData.text = fromTierData.text.replace(
         /with (Wand|Bow)s?\s+Attacks/gi,
         `with ${weaponSingular} Attacks`
       );
-      // Also handle other patterns that might exist
-      adjustedTierData.text = adjustedTierData.text.replace(
-        /with (Wand|Bow)s?(?!\s+Attacks)/gi,
-        `with ${weaponSingular}s`
-      );
     } else if (currentJewelType === "murderous") {
-      // For melee weapons, similar logic
       const meleePattern =
         /with (Dagger|Claw|Sword|Axe|Mace|Sceptre|Staff)s?\s+Attacks/gi;
-      adjustedTierData.text = tierData.text.replace(
+      adjustedTierData.text = fromTierData.text.replace(
         meleePattern,
         `with ${weaponSingular} Attacks`
       );
     }
   }
 
-  // Calculate search values with averaging for flat damage mods
+  // Calculate search values with conditional averaging
   const modTextForCheck = adjustedTierData.text || mod.originalName || mod.name;
-  const searchValues = calculateSearchValues(tierData, modTextForCheck);
+  const searchValues = calculateSearchValues(
+    fromTierData,
+    modTextForCheck,
+    isExactTier,
+    fromTier,
+    toTier
+  );
+
+  // For range searches, we use fromTier's average as min and toTier's average as max
+  let finalMinValue = searchValues.min;
+  let finalMaxValue = isExactTier ? searchValues.max : toTierData.max;
+
+  // For damage mods in range searches, use average damage for both tiers
+  if (!isExactTier && isFlatAddedDamageMod(modTextForCheck)) {
+    // Calculate the average damage for the toTier
+    const toTierAvg = Math.round((toTierData.min + toTierData.max) / 2);
+    finalMaxValue = toTierAvg;
+    console.log(
+      `[Damage Range] Using average damage range: ${finalMinValue} to ${toTierAvg}`
+    );
+  }
+
+  // No need for tier capping when using average damage values
+
+  console.log(
+    `[Final Values] Min: ${finalMinValue} (from ${fromTier}${
+      searchValues.wasAveraged ? ", avg damage" : ""
+    }), Max: ${finalMaxValue} (from ${toTier}${
+      !isExactTier && isFlatAddedDamageMod(modTextForCheck)
+        ? ", avg damage"
+        : ""
+    })`
+  );
 
   const modData = {
     key: mod.key,
     modName: mod.name,
     name: mod.name,
     originalName: mod.originalName || mod.name,
-    tier: tier,
+    fromTier: fromTier,
+    toTier: toTier,
+    tierRange: isExactTier ? fromTier : `${fromTier}-${toTier}`,
     tierData: adjustedTierData,
-    minValue: searchValues.min, // Use calculated value (averaged or original)
-    maxValue: searchValues.max, // Use calculated value
-    wasAveraged: searchValues.wasAveraged, // Track if averaging was applied
+    minValue: finalMinValue,
+    maxValue: finalMaxValue,
+    wasAveraged: searchValues.wasAveraged,
+    wasCapped: finalMaxValue < toTierData.max,
+    isExactTier: isExactTier,
     statId: mod.statId,
     category: mod.category,
     userSearchedWeapon: mod.userSearchedWeapon,
@@ -930,24 +1167,15 @@ function addSelectedMod(mod, tier, tierData) {
   updateAutoFillButton();
   clearSearchInput();
 
+  const tierDisplay = isExactTier ? fromTier : `${fromTier}-${toTier}`;
   const averageIndicator = searchValues.wasAveraged ? " (averaged)" : "";
+  const cappedIndicator = modData.wasCapped ? " (capped)" : "";
   showStatusMessage(
-    `Added ${mod.name} (${tier})${averageIndicator}`,
+    `Added ${mod.name} (${tierDisplay})${averageIndicator}${cappedIndicator}`,
     "success"
   );
 }
 
-function debugModGenericization(mod) {
-  console.log("=== Mod Genericization Debug ===");
-  console.log("Mod name:", mod.name);
-  console.log("Display text:", mod.displayText);
-  console.log("Tier text:", mod.tierData?.text);
-  console.log("Searched weapon:", mod.searchedWeapon);
-  console.log("Genericized result:", getGenericizedModText(mod));
-  console.log("================================");
-}
-
-// Update selected mods display
 function updateSelectedModsDisplay() {
   if (!elements.selectedMods) return;
 
@@ -959,28 +1187,43 @@ function updateSelectedModsDisplay() {
 
   elements.selectedMods.innerHTML = selectedMods
     .map((mod, index) => {
-      // Show actual values being used for search
       const displayMin = mod.minValue;
       const displayMax = mod.maxValue;
-      const avgIndicator = mod.wasAveraged
-        ? ' <span style="color: #4CAF50; font-size: 0.85em;">(avg)</span>'
-        : "";
+      const tierDisplay = mod.tierRange || mod.fromTier || "T?";
+
+      // Build indicator string
+      let indicators = "";
+      if (mod.wasAveraged) {
+        indicators +=
+          ' <span style="color: #4CAF50; font-size: 0.85em;">(avg)</span>';
+      }
+      if (mod.wasCapped) {
+        indicators +=
+          ' <span style="color: #ff9800; font-size: 0.85em;">(cap)</span>';
+      }
 
       return `
         <div class="selected-mod">
           <span class="mod-info">
             <span class="mod-name">${mod.name}</span>
-            <span class="mod-tier">${mod.tier}</span>
-            <span class="mod-range">(${displayMin}-${displayMax})${avgIndicator}</span>
+            <span class="mod-tier">${tierDisplay}</span>
+            <span class="mod-range">(${displayMin}-${displayMax})${indicators}</span>
           </span>
-          <button class="remove-mod" onclick="removeSelectedMod(${index})">&times;</button>
+          <button class="remove-mod" data-index="${index}">&times;</button>
         </div>
       `;
     })
     .join("");
+
+  // Attach event listeners to remove buttons
+  document.querySelectorAll(".remove-mod").forEach((button) => {
+    button.addEventListener("click", function () {
+      const index = parseInt(this.getAttribute("data-index"));
+      removeSelectedMod(index);
+    });
+  });
 }
 
-// Remove selected mod
 function removeSelectedMod(index) {
   if (index >= 0 && index < selectedMods.length) {
     const removedMod = selectedMods.splice(index, 1)[0];
@@ -990,7 +1233,6 @@ function removeSelectedMod(index) {
   }
 }
 
-// Clear search input
 function clearSearchInput() {
   if (elements.modSearch) {
     elements.modSearch.value = "";
@@ -998,7 +1240,6 @@ function clearSearchInput() {
   clearSearchResults();
 }
 
-// Update auto-fill button
 function updateAutoFillButton() {
   if (!elements.autoFillBtn) return;
 
@@ -1018,48 +1259,22 @@ function updateAutoFillButton() {
   }
 }
 
-// Get genericized mod text from the tier data
+// === AUTO-FILL ===
 function getGenericizedModText(mod) {
-  // Priority 1: Use the adjusted tier text (which has user's weapon choice)
   if (mod.tierData && mod.tierData.text) {
     return genericizeModText(mod.tierData.text);
   }
 
-  // Fallback to other sources
   const textToGenericize = mod.displayText || mod.originalName || mod.name;
   return genericizeModText(textToGenericize);
 }
 
-// Helper to genericize mod text (replace numbers with #)
-function genericizeModText(text) {
-  if (!text) return "";
-
-  // First ensure weapon names are properly formatted
-  // "with Wands Attacks" -> "with Wand Attacks"
-  // "with Bows Attacks" -> "with Bow Attacks"
-  let formatted = text.replace(/with (\w+)s\s+Attacks/g, "with $1 Attacks");
-
-  // Now genericize the numbers
-  formatted = formatted
-    .replace(
-      /\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\) to \(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g,
-      "# to #"
-    )
-    .replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "#")
-    .replace(/\b\d+(?:\.\d+)?\b/g, "#")
-    .replace(/\+#/g, "+#");
-
-  return formatted.trim();
-}
-
-// Handle auto-fill action
 async function handleAutoFill() {
   if (!currentJewelType) {
     showStatusMessage("Please select a jewel type", "error");
     return;
   }
 
-  // Get current speed setting
   const speedSlider = document.getElementById("speedSlider");
   const speedMultiplier = parseFloat(speedSlider.value) || 0.5;
 
@@ -1074,7 +1289,7 @@ async function handleAutoFill() {
       genericText: getGenericizedModText(mod),
       searchText: getGenericizedModText(mod),
     })),
-    speedMultiplier: speedMultiplier, // Add speed setting to config
+    speedMultiplier: speedMultiplier,
     timestamp: Date.now(),
   };
 
@@ -1100,7 +1315,6 @@ async function handleAutoFill() {
   }
 }
 
-// Show status message
 function showStatusMessage(message, type = "info") {
   if (!elements.statusMessage) return;
 
@@ -1117,14 +1331,13 @@ function showStatusMessage(message, type = "info") {
   }
 }
 
-// Speed control initialization
+// === SPEED CONTROL ===
 function initializeSpeedControl() {
   const speedSlider = document.getElementById("speedSlider");
   const speedValue = document.getElementById("speedValue");
   const speedDesc = document.getElementById("speedDesc");
   const speedPresets = document.querySelectorAll(".speed-preset");
 
-  // Load saved speed setting
   chrome.storage.local.get(["speedMultiplier"], (result) => {
     const savedSpeed = result.speedMultiplier || 0.5;
     speedSlider.value = savedSpeed;
@@ -1132,7 +1345,6 @@ function initializeSpeedControl() {
     updatePresetButtons(savedSpeed);
   });
 
-  // Update display when slider changes
   speedSlider.addEventListener("input", (e) => {
     const speed = parseFloat(e.target.value);
     updateSpeedDisplay(speed);
@@ -1140,7 +1352,6 @@ function initializeSpeedControl() {
     saveSpeedSetting(speed);
   });
 
-  // Handle preset buttons
   speedPresets.forEach((button) => {
     button.addEventListener("click", (e) => {
       const speed = parseFloat(e.target.dataset.speed);
@@ -1152,11 +1363,9 @@ function initializeSpeedControl() {
   });
 
   function updateSpeedDisplay(speed) {
-    // Calculate actual speed multiplier
     const multiplier = (1 / speed).toFixed(1);
     speedValue.textContent = `${multiplier}x`;
 
-    // Update description
     if (speed <= 0.3) {
       speedDesc.textContent = "Ultra Fast";
       speedDesc.style.color = "#ff6b6b";
@@ -1190,329 +1399,5 @@ function initializeSpeedControl() {
     );
   }
 }
-
-/**
- * Check if a mod has weapon-specific text
- */
-function isWeaponSpecificMod(modText) {
-  if (!modText) return false;
-
-  const weaponPattern =
-    /with (wand|bow|dagger|claw|sword|axe|mace|sceptre|staff|one handed|two handed)/i;
-  return weaponPattern.test(modText);
-}
-
-/**
- * Extract weapon type from mod text
- */
-function extractWeaponFromMod(modText) {
-  if (!modText) return null;
-
-  const match = modText.match(/with ([\w\s]+?)(?:\s+attacks?)?$/i);
-  if (!match) return null;
-
-  const weapon = match[1].toLowerCase().trim();
-
-  // Normalize weapon names
-  if (weapon.includes("wand")) return "wand";
-  if (weapon.includes("bow")) return "bow";
-  if (weapon.includes("dagger")) return "dagger";
-  if (weapon.includes("claw")) return "claw";
-  if (weapon.includes("sceptre")) return "sceptre";
-  if (weapon.includes("staff")) return "staff";
-  if (weapon.includes("two handed")) {
-    if (weapon.includes("sword")) return "two handed sword";
-    if (weapon.includes("axe")) return "two handed axe";
-    if (weapon.includes("mace")) return "two handed mace";
-  }
-  if (weapon.includes("sword")) return "sword";
-  if (weapon.includes("axe")) return "axe";
-  if (weapon.includes("mace")) return "mace";
-
-  return weapon;
-}
-
-/**
- * Get equivalent weapon mods using the same tier values
- */
-function getWeaponEquivalents(originalMod, tierData) {
-  const modText = tierData.text || originalMod.originalName || originalMod.name;
-
-  if (!isWeaponSpecificMod(modText)) {
-    return null;
-  }
-
-  const weapon = extractWeaponFromMod(modText);
-  if (!weapon || !WEAPON_EQUIVALENTS[weapon]) {
-    return null;
-  }
-
-  const equivalentWeapons = WEAPON_EQUIVALENTS[weapon];
-  if (equivalentWeapons.length <= 1) {
-    return null; // No equivalents
-  }
-
-  // Generate equivalent mod texts
-  const equivalents = equivalentWeapons.map((weaponType) => {
-    // Replace weapon name in the original text
-    let equivalentText = modText;
-
-    // Handle special cases
-    if (weaponType.includes("two handed")) {
-      equivalentText = modText.replace(/with [\w\s]+/i, `with ${weaponType}`);
-    } else if (weaponType.includes("one handed")) {
-      equivalentText = modText.replace(/with [\w\s]+/i, `with ${weaponType}`);
-    } else {
-      // Simple weapon replacement
-      const weaponDisplay =
-        weaponType.charAt(0).toUpperCase() + weaponType.slice(1) + "s";
-      equivalentText = modText.replace(
-        /with [\w\s]+/i,
-        `with ${weaponDisplay}`
-      );
-    }
-
-    return {
-      weapon: weaponType,
-      text: equivalentText,
-      genericText: genericizeModText(equivalentText),
-    };
-  });
-
-  return {
-    originalWeapon: weapon,
-    equivalents: equivalents,
-    count: equivalents.length,
-  };
-}
-
-/**
- * Enhanced tier modal to show weapon equivalents option
- */
-function showTierModalWithEquivalents(mod) {
-  if (!elements.tierModal || !elements.tierOptions) return;
-
-  elements.tierOptions.innerHTML = "";
-
-  // Check if this mod has weapon equivalents
-  let hasEquivalents = false;
-  let weaponEquivalents = null;
-
-  // Check first tier for weapon info
-  const firstTier = Object.values(mod.tiers)[0];
-  if (firstTier) {
-    weaponEquivalents = getWeaponEquivalents(mod, firstTier);
-    hasEquivalents = weaponEquivalents !== null;
-  }
-
-  // Add weapon equivalents checkbox if applicable
-  if (hasEquivalents) {
-    const equivalentsDiv = document.createElement("div");
-    equivalentsDiv.style.cssText = `
-      padding: 10px;
-      background: #3a3a3a;
-      border-radius: 4px;
-      margin-bottom: 12px;
-      border: 1px solid #555;
-    `;
-
-    equivalentsDiv.innerHTML = `
-      <label style="display: flex; align-items: center; cursor: pointer;">
-        <input type="checkbox" id="includeWeaponEquivalents" style="margin-right: 8px;">
-        <span style="color: #d4af37; font-weight: bold;">
-          Include all ${weaponEquivalents.count} weapon types
-        </span>
-      </label>
-      <div style="color: #999; font-size: 11px; margin-top: 4px;">
-        (${weaponEquivalents.equivalents.map((e) => e.weapon).join(", ")})
-      </div>
-    `;
-
-    elements.tierOptions.appendChild(equivalentsDiv);
-  }
-
-  // Create tier options with REAL values
-  Object.entries(mod.tiers).forEach(([tier, data]) => {
-    const tierButton = document.createElement("button");
-    tierButton.className = "tier-option";
-    tierButton.innerHTML = `
-      <span class="tier-name">${tier}</span>
-      <span class="tier-range">${data.min}-${data.max}</span>
-    `;
-
-    tierButton.addEventListener("click", () => {
-      const includeEquivalents = document.getElementById(
-        "includeWeaponEquivalents"
-      );
-      const shouldIncludeEquivalents =
-        includeEquivalents && includeEquivalents.checked;
-
-      if (shouldIncludeEquivalents && weaponEquivalents) {
-        // Add all weapon equivalents as a group
-        addWeaponEquivalentGroup(mod, tier, data, weaponEquivalents);
-      } else {
-        // Add single mod as before
-        addSelectedMod(mod, tier, data);
-      }
-      closeTierModal();
-    });
-
-    elements.tierOptions.appendChild(tierButton);
-  });
-
-  elements.tierModal.style.display = "flex";
-}
-
-/**
- * Add a group of weapon equivalent mods
- */
-function addWeaponEquivalentGroup(
-  originalMod,
-  tier,
-  tierData,
-  weaponEquivalents
-) {
-  // Remove any existing mods with the same base type
-  const baseModName = originalMod.name.replace(/with \w+/i, "").trim();
-  selectedMods = selectedMods.filter((m) => !m.name.includes(baseModName));
-
-  // Add the weapon group as a single "smart" mod
-  const groupMod = {
-    key: `${originalMod.key}_weapon_group`,
-    modName: `${baseModName} (${weaponEquivalents.count} weapons)`,
-    name: `${baseModName} (${weaponEquivalents.count} weapons)`,
-    originalName: originalMod.originalName,
-    tier: tier,
-    tierData: tierData,
-    minValue: tierData.min,
-    maxValue: tierData.max,
-    statId: originalMod.statId,
-    category: originalMod.category,
-    isWeaponGroup: true,
-    weaponEquivalents: weaponEquivalents.equivalents,
-    // Store all genericized texts for the content script
-    genericTexts: weaponEquivalents.equivalents.map((e) => e.genericText),
-  };
-
-  selectedMods.push(groupMod);
-  updateSelectedModsDisplay();
-  updateAutoFillButton();
-  clearSearchInput();
-
-  showStatusMessage(
-    `Added ${baseModName} for ${weaponEquivalents.count} weapon types (${tier})`,
-    "success"
-  );
-}
-
-// Override the original showTierModal function
-const originalShowTierModal = showTierModal;
-showTierModal = showTierModalWithEquivalents;
-
-/**
- * Enhanced handleAutoFill to support weapon groups
- */
-const originalHandleAutoFill = handleAutoFill;
-handleAutoFill = async function () {
-  if (!currentJewelType) {
-    showStatusMessage("Please select a jewel type", "error");
-    return;
-  }
-
-  const speedSlider = document.getElementById("speedSlider");
-  const speedMultiplier = parseFloat(speedSlider.value) || 0.5;
-  const searchMode = selectedMods.length > 0 ? "with-mods" : "base-only";
-
-  const config = {
-    jewelType: currentJewelType,
-    jewelDisplayName: JEWEL_TYPE_CONFIG[currentJewelType].displayName,
-    searchMode: searchMode,
-    selectedMods: selectedMods.map((mod) => {
-      // Debug each mod before sending
-      if (mod.searchedWeapon) {
-        console.log(`📝 Processing ${mod.name} for ${mod.searchedWeapon}`);
-      }
-
-      const genericText = getGenericizedModText(mod);
-
-      // Verify the generic text has the correct weapon
-      if (
-        mod.searchedWeapon &&
-        !genericText.toLowerCase().includes(mod.searchedWeapon)
-      ) {
-        console.error(
-          `❌ Generic text missing weapon! Expected ${mod.searchedWeapon} in: ${genericText}`
-        );
-      }
-
-      return {
-        ...mod,
-        genericText: genericText,
-        searchText: genericText,
-      };
-    }),
-    speedMultiplier: speedMultiplier,
-    timestamp: Date.now(),
-  };
-
-  showStatusMessage(
-    `Opening trade site (${(1 / speedMultiplier).toFixed(1)}x speed)...`,
-    "info"
-  );
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      action: "openTradeTab",
-      config: config,
-    });
-
-    if (response && response.success) {
-      showStatusMessage("Trade site opened successfully", "success");
-    } else {
-      throw new Error(response?.error || "Unknown error");
-    }
-  } catch (error) {
-    console.error("❌ Auto-fill failed:", error);
-    showStatusMessage("Failed to open trade site", "error");
-  }
-};
-
-/**
- * Enhanced display for weapon group mods in the selected list
- */
-const originalUpdateSelectedModsDisplay = updateSelectedModsDisplay;
-updateSelectedModsDisplay = function () {
-  if (!elements.selectedMods) return;
-
-  if (selectedMods.length === 0) {
-    elements.selectedMods.innerHTML =
-      '<div class="no-mods">No mods selected</div>';
-    return;
-  }
-
-  elements.selectedMods.innerHTML = selectedMods
-    .map((mod, index) => {
-      const isWeaponGroup = mod.isWeaponGroup;
-      const displayStyle = isWeaponGroup
-        ? 'style="border-left-color: #e74c3c;"'
-        : "";
-      const weaponIcon = isWeaponGroup ? "⚔️ " : "";
-
-      return `
-      <div class="selected-mod" ${displayStyle}>
-        <span class="mod-info">
-          <span class="mod-name">${weaponIcon}${mod.name}</span>
-          <span class="mod-tier">${mod.tier}</span>
-          <span class="mod-range">(${mod.tierData.min}-${mod.tierData.max})</span>
-        </span>
-        <button class="remove-mod" onclick="removeSelectedMod(${index})">&times;</button>
-      </div>
-    `;
-    })
-    .join("");
-};
-
-// Make functions globally available
-window.removeSelectedMod = removeSelectedMod;
 
 console.log("📦 PoE Trade Helper popup script loaded completely");
