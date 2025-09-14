@@ -7,7 +7,7 @@
     <style>
       body {
         width: 400px;
-        min-height: 500px;
+        min-height: 450px;
         margin: 0;
         padding: 16px;
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -219,6 +219,17 @@
         box-shadow: none;
       }
 
+      .ultra-speed-indicator {
+        text-align: center;
+        margin-bottom: 12px;
+        padding: 8px;
+        background: rgba(212, 175, 55, 0.1);
+        border: 1px solid #d4af37;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #d4af37;
+      }
+
       .status-message {
         padding: 8px 12px;
         border-radius: 4px;
@@ -275,7 +286,6 @@
         font-weight: bold;
       }
 
-      /* New tier range selector styles */
       .tier-range-selector {
         display: flex;
         align-items: center;
@@ -313,41 +323,6 @@
         font-weight: bold;
       }
 
-      .tier-options {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 16px;
-      }
-
-      .tier-option {
-        padding: 12px;
-        background: #3a3a3a;
-        color: #e0e0e0;
-        border: 2px solid #555;
-        border-radius: 4px;
-        cursor: pointer;
-        text-align: center;
-        transition: all 0.2s;
-      }
-
-      .tier-option:hover {
-        background: #4a4a4a;
-        border-color: #d4af37;
-      }
-
-      .tier-name {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 4px;
-        color: #d4af37;
-      }
-
-      .tier-range {
-        font-size: 12px;
-        color: #a0a0a0;
-      }
-
       .modal-buttons {
         display: flex;
         gap: 8px;
@@ -379,86 +354,6 @@
 
       .cancel-button:hover {
         background: #666;
-      }
-
-      .speed-control {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 10px 0;
-      }
-
-      #speedSlider {
-        flex: 1;
-        height: 6px;
-        background: #333;
-        outline: none;
-        border-radius: 3px;
-      }
-
-      #speedSlider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 20px;
-        height: 20px;
-        background: #d4af37;
-        cursor: pointer;
-        border-radius: 50%;
-        transition: transform 0.2s;
-      }
-
-      #speedSlider::-webkit-slider-thumb:hover {
-        transform: scale(1.2);
-        box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
-      }
-
-      .speed-labels {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-width: 60px;
-      }
-
-      .speed-value {
-        color: #d4af37;
-        font-weight: bold;
-        font-size: 16px;
-      }
-
-      .speed-description {
-        color: #999;
-        font-size: 11px;
-        margin-top: 2px;
-      }
-
-      .speed-presets {
-        display: flex;
-        gap: 6px;
-        margin-top: 8px;
-      }
-
-      .speed-preset {
-        flex: 1;
-        padding: 6px;
-        background: #333;
-        color: #999;
-        border: 1px solid #444;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.2s;
-      }
-
-      .speed-preset:hover {
-        background: #3a3a3a;
-        color: #d4af37;
-        border-color: #555;
-      }
-
-      .speed-preset.active {
-        background: #4a4a4a;
-        color: #d4af37;
-        border-color: #d4af37;
       }
 
       ::-webkit-scrollbar {
@@ -510,30 +405,6 @@
       <label>Selected Mods:</label>
       <div id="selectedMods" class="selected-mods">
         <div class="no-mods">No mods selected</div>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Auto-fill Speed:</label>
-      <div class="speed-control">
-        <input
-          type="range"
-          id="speedSlider"
-          min="0.3"
-          max="1.0"
-          step="0.1"
-          value="0.5"
-        />
-        <div class="speed-labels">
-          <span class="speed-value" id="speedValue">2x</span>
-          <span class="speed-description" id="speedDesc">Fast</span>
-        </div>
-      </div>
-      <div class="speed-presets">
-        <button class="speed-preset" data-speed="0.3">3x Ultra</button>
-        <button class="speed-preset active" data-speed="0.5">2x Fast</button>
-        <button class="speed-preset" data-speed="0.7">1.4x Safe</button>
-        <button class="speed-preset" data-speed="1.0">1x Normal</button>
       </div>
     </div>
 

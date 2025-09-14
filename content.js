@@ -1,29 +1,6 @@
 // PoE Easy Search - Content Script (Ultra-Speed Optimized)
 console.log("🎯 PoE Easy Search content script loading...");
 
-// === HARDCODED ULTRA-SPEED CONSTANTS ===
-const CONFIG = {
-  JEWEL_MAPPINGS: {
-    murderous: "Murderous Eye Jewel",
-    searching: "Searching Eye Jewel",
-    hypnotic: "Hypnotic Eye Jewel",
-    ghastly: "Ghastly Eye Jewel",
-  },
-  SELECTORS: {
-    BASE_ITEM_SEARCH: [
-      '.search-select input[type="text"]',
-      'input[placeholder*="Search Items"]',
-      ".multiselect__input",
-    ],
-  },
-  GITHUB_URLS: {
-    JEWEL_MODS:
-      "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/abyss_jewel_mods.json",
-    STATIC_MODS:
-      "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/mods.json",
-  },
-};
-
 // Ultra-speed timing (0.3x multiplier applied)
 const wait = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms * 0.3 + Math.random() * 30));
