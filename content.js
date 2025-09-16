@@ -1,29 +1,29 @@
-// PoE Easy Search - Content Script (Ultra-Speed Optimized)
+// PoE Easy Search - Content Script (Ultra-Speed Data-Driven v9.0)
 console.log("🎯 PoE Easy Search content script loading...");
 
 // Ultra-speed timing (0.3x multiplier applied)
 const wait = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms * 0.3 + Math.random() * 30));
 
-// === GLOBAL STATE ===
-let abyssJewelMods = null;
-let staticMods = null;
+// === GLOBAL STATE - SIMPLIFIED ===
+let allAbyssModsData = null;
 let modMappings = {};
 
-// === DATA LOADING ===
+// === DATA LOADING - SIMPLIFIED ===
 async function loadModsData() {
-  if (abyssJewelMods && staticMods) return true;
+  if (allAbyssModsData) return true;
 
   try {
-    const [jewelResponse, modsResponse] = await Promise.all([
-      fetch(CONFIG.GITHUB_URLS.JEWEL_MODS),
-      fetch(CONFIG.GITHUB_URLS.STATIC_MODS),
-    ]);
+    console.log("📂 Loading complete abyss jewel dataset...");
+    const response = await fetch(CONFIG.GITHUB_URLS.ALL_ABYSS_MODS);
 
-    abyssJewelMods = await jewelResponse.json();
-    staticMods = await modsResponse.json();
-    createDynamicModMappings();
-    console.log("✅ Mod data loaded successfully");
+    if (!response.ok) {
+      throw new Error("Failed to load complete abyss jewel dataset");
+    }
+
+    allAbyssModsData = await response.json();
+    createSimpleModMappings();
+    console.log("✅ Complete mod dataset loaded successfully");
     return true;
   } catch (error) {
     console.error("❌ Failed to load mod data:", error);
@@ -32,159 +32,84 @@ async function loadModsData() {
   }
 }
 
-function createDynamicModMappings() {
-  if (!staticMods) return;
+function createSimpleModMappings() {
+  if (!allAbyssModsData) return;
 
   modMappings = {};
   let mappingCount = 0;
 
-  for (const [modId, modData] of Object.entries(staticMods)) {
-    if (!modData.text || modData.domain !== "abyss_jewel") continue;
+  // Create simple mappings from the complete dataset
+  Object.entries(allAbyssModsData).forEach(([modId, modData]) => {
+    if (!modData.text) return;
 
     const genericizedText = genericizeModText(modData.text);
-    modMappings[genericizedText] = {
+    modMappings[genericizedText.toLowerCase()] = {
       modId: modId,
       originalText: modData.text,
       searchText: genericizedText,
       stats: modData.stats,
       required_level: modData.required_level,
-      ...modData,
     };
     mappingCount++;
 
-    if (
-      modData.text.match(
-        /(dagger|claw|sword|axe|mace or sceptre|staff|bow|wand)/i
-      )
-    ) {
-      const weaponAliases = createWeaponAliases(modData, genericizedText);
-      Object.assign(modMappings, weaponAliases);
-      mappingCount += Object.keys(weaponAliases).length;
-    }
-  }
+    // Also map by the raw text
+    modMappings[modData.text.toLowerCase()] = {
+      modId: modId,
+      originalText: modData.text,
+      searchText: genericizedText,
+      stats: modData.stats,
+      required_level: modData.required_level,
+    };
+    mappingCount++;
+  });
 
-  console.log(`✅ Created ${mappingCount} dynamic mod mappings`);
+  console.log(
+    `✅ Created ${mappingCount} simple mod mappings from complete dataset`
+  );
 }
 
-// === UTILITY FUNCTIONS ===
+// === UTILITY FUNCTIONS - SIMPLIFIED ===
 function genericizeModText(modText) {
-  let genericized = modText.replace(/\(\d+-\d+\)/g, "#");
-  genericized = genericized.replace(/\b\d+\b/g, "#");
-  return genericized.replace(/\s+/g, " ").trim();
+  if (!modText) return "";
+
+  return modText
+    .replace(/\(\d+-\d+\)/g, "#") // Replace (12-15) with #
+    .replace(/\b\d+\b/g, "#") // Replace standalone numbers
+    .replace(/\+#/g, "+#") // Normalize + signs
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .trim();
 }
 
-function createWeaponAliases(modData, genericizedText) {
-  const aliases = {};
-  const weaponTypes = [
-    "dagger",
-    "claw",
-    "sword",
-    "axe",
-    "mace or sceptre",
-    "staff",
-    "bow",
-    "wand",
-  ];
-
-  for (const weaponType of weaponTypes) {
-    if (modData.text.toLowerCase().includes(weaponType)) {
-      const aliasWeapons = getWeaponAliases(weaponType);
-      for (const alias of aliasWeapons) {
-        if (alias !== weaponType) {
-          const aliasPattern = genericizedText.replace(
-            new RegExp(weaponType, "gi"),
-            alias
-          );
-          aliases[aliasPattern] = {
-            ...modData,
-            searchText: aliasPattern,
-            isAlias: true,
-            originalWeapon: weaponType,
-            aliasWeapon: alias,
-          };
-        }
-      }
-      break;
-    }
-  }
-  return aliases;
-}
-
-function getWeaponAliases(weaponType) {
-  const meleeWeapons = [
-    "dagger",
-    "claw",
-    "sword",
-    "axe",
-    "mace or sceptre",
-    "staff",
-  ];
-  const rangedWeapons = ["bow", "wand"];
-
-  if (meleeWeapons.includes(weaponType)) return meleeWeapons;
-  if (rangedWeapons.includes(weaponType)) return rangedWeapons;
-  return [weaponType];
-}
-
-function findDynamicMapping(searchTerm) {
+function findModMapping(searchTerm) {
   if (!modMappings) return null;
 
   const lowerSearchTerm = searchTerm.toLowerCase();
+
+  // Direct match
   if (modMappings[lowerSearchTerm]) {
     return modMappings[lowerSearchTerm].searchText;
   }
 
+  // Try genericized version
   const genericizedSearchTerm = genericizeModText(searchTerm);
-  if (modMappings[genericizedSearchTerm]) {
+  if (modMappings[genericizedSearchTerm.toLowerCase()]) {
     return genericizedSearchTerm;
   }
 
-  let bestMatch = null;
-  let bestScore = 0;
-
+  // Fuzzy matching for partial matches
   for (const [pattern, modData] of Object.entries(modMappings)) {
-    let score = calculateMatchScore(genericizedSearchTerm, pattern);
-    if (score > bestScore && score >= 60) {
-      bestScore = score;
-      bestMatch = modData.searchText;
+    if (
+      pattern.includes(lowerSearchTerm) ||
+      lowerSearchTerm.includes(pattern)
+    ) {
+      console.log(
+        `✅ Fuzzy match found: "${searchTerm}" → "${modData.searchText}"`
+      );
+      return modData.searchText;
     }
   }
 
-  if (bestMatch) {
-    console.log(
-      `✅ Fuzzy match found: "${searchTerm}" → "${bestMatch}" (score: ${bestScore})`
-    );
-    return bestMatch;
-  }
   return null;
-}
-
-function calculateMatchScore(searchTerm, pattern) {
-  const lowerSearchTerm = searchTerm.toLowerCase();
-  const lowerPattern = pattern.toLowerCase();
-
-  if (lowerPattern === lowerSearchTerm) return 100;
-  if (
-    lowerPattern.includes(lowerSearchTerm) ||
-    lowerSearchTerm.includes(lowerPattern)
-  )
-    return 80;
-
-  let score = 0;
-  const searchWords = lowerSearchTerm.split(" ").filter((w) => w.length > 2);
-  const patternWords = lowerPattern.split(" ").filter((w) => w.length > 2);
-
-  for (const searchWord of searchWords) {
-    for (const patternWord of patternWords) {
-      if (
-        patternWord.includes(searchWord) ||
-        searchWord.includes(patternWord)
-      ) {
-        score += 10;
-      }
-    }
-  }
-  return score;
 }
 
 function createFallbackMappings() {
@@ -192,8 +117,6 @@ function createFallbackMappings() {
     "added life": "+# to maximum Life",
     life: "+# to maximum Life",
     "+# to maximum life": "+# to maximum Life",
-    "life regeneration": "Regenerate # Life per second",
-    "life regen": "Regenerate # Life per second",
     "added mana": "+# to maximum Mana",
     mana: "+# to maximum Mana",
     "added energy shield": "+# to maximum Energy Shield",
@@ -207,14 +130,15 @@ function createFallbackMappings() {
 }
 
 function mapModToTradeStat(modName, mod) {
-  if (mod && (mod.genericText || mod.searchText)) {
-    const genericText = mod.genericText || mod.searchText;
-    console.log(`✅ Using genericized text from popup: ${genericText}`);
-    return genericText;
+  // Use the exact text from the complete dataset when available
+  if (mod && mod.searchText) {
+    console.log(`✅ Using exact mod text from dataset: ${mod.searchText}`);
+    return mod.searchText;
   }
 
-  const dynamicMapping = findDynamicMapping(modName);
-  return dynamicMapping || modName;
+  // Fallback to mapping lookup
+  const mapping = findModMapping(modName);
+  return mapping || modName;
 }
 
 // === MAIN AUTO-FILL HANDLER ===
@@ -247,6 +171,7 @@ async function handleAutoFill(config) {
   }
 }
 
+// === BASE ITEM SELECTION ===
 async function setBaseItemType(jewelType) {
   const displayName = CONFIG.JEWEL_MAPPINGS[jewelType];
   if (!displayName) throw new Error(`Unknown jewel type: ${jewelType}`);
@@ -342,6 +267,7 @@ async function selectVueMultiselectOption(targetText) {
   return false;
 }
 
+// === MOD FILTER ADDITION - SIMPLIFIED ===
 async function addModFilters(selectedMods) {
   for (let i = 0; i < selectedMods.length; i++) {
     const mod = selectedMods[i];
@@ -359,6 +285,7 @@ async function addModFilters(selectedMods) {
 async function addSingleModFilter(mod, filterIndex) {
   console.log(`🔥 Creating stat filter ${filterIndex + 1} for: ${mod.modName}`);
 
+  // Find the "Add Stat Filter" button
   let addStatButton = null;
   const statFiltersPanel = document.querySelector(
     ".search-advanced-pane.brown"
@@ -397,6 +324,7 @@ async function addSingleModFilter(mod, filterIndex) {
     throw new Error('Could not find "Add Stat Filter" control');
   }
 
+  // Use the exact mod text from the complete dataset
   const tradeSiteStat = mapModToTradeStat(mod.modName, mod);
   console.log(`🔥 Using trade site stat: "${tradeSiteStat}"`);
 
@@ -454,7 +382,6 @@ async function interactWithStatInput(input, tradeSiteStat) {
 
 async function selectFromStatDropdown(targetText) {
   console.log("🔍 Looking for STAT dropdown option:", targetText);
-
   await wait(120);
 
   const statDropdownSelectors = [
@@ -555,8 +482,7 @@ async function setModValuesInLatestFilter(mod) {
   let minValue = mod.minValue;
   let maxValue = mod.maxValue;
 
-  console.log(`✅ Using values from popup: min=${minValue}, max=${maxValue}`);
-
+  console.log(`✅ Using values: min=${minValue}, max=${maxValue}`);
   await wait(60);
 
   const statFilterContainers = document.querySelectorAll(
@@ -716,7 +642,9 @@ function initializeContentScript() {
 
 // Export for debugging
 window.loadModsData = loadModsData;
-window.findDynamicMapping = findDynamicMapping;
+window.findModMapping = findModMapping;
 window.modMappings = modMappings;
 
-console.log("✅ PoE Easy Search content script loaded successfully");
+console.log(
+  "✅ PoE Easy Search content script loaded successfully - Data-Driven v9.0"
+);

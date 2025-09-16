@@ -1,4 +1,4 @@
-# Path of Exile Trade Helper - Abyss Jewels Edition - Project Bootstrap v9.0
+# Path of Exile Trade Helper - Abyss Jewels Edition - Project Bootstrap v9.3
 
 ## Project Overview
 A specialized browser extension focused exclusively on Abyss Jewel trading in Path of Exile. Features advanced fuzzy search, intelligent tier range selection, seamless auto-fill integration with the official trade site, **hardcoded ultra-speed operation**, **smart average damage calculation for accurate tier filtering**, and **complete weapon mod coverage using official game data**.
@@ -10,274 +10,106 @@ A specialized browser extension focused exclusively on Abyss Jewel trading in Pa
 - Hypnotic Eye Jewel (Caster builds)
 - Ghastly Eye Jewel (Summoner builds)
 
-## ✅ CURRENT STATUS - DATA-DRIVEN ARCHITECTURE COMPLETE
+## ⚠️ CURRENT STATUS - ACTIVE DEBUGGING SESSION (v9.3)
 
 ### Core Functionality Status
 - ✅ **Extension loads and runs** without errors
-- ✅ **Fuzzy search with user-friendly terms** (search "life" finds "+# to maximum Life")
+- ✅ **Complete dataset loading** (`all_abyss_jewel_mods.json` - 28k lines)
 - ✅ **Tier range selection** (From/To dropdowns for precise tier targeting)
 - ✅ **Average damage calculation** for flat damage mods
 - ✅ **Hardcoded ultra-speed operation** (3x faster, no user controls)
 - ✅ **6 mod support** (3 prefixes + 3 suffixes)
 - ✅ **Anti-bot detection** measures with human-like timing
 - ✅ **Persistent settings** via Chrome storage
-- ✅ **All mod types working** including life, damage, resistances
 - ✅ **Complete weapon mod coverage** - All valid weapon combinations included in data
-- ✅ **Partial weapon search** - Typing "scep" shows sceptre mods
-- ✅ **Natural weapon restrictions** - Chaos damage only on valid weapons (claws, daggers, bows)
 - ✅ **Auto-fill fully working** - All mods populate correctly on trade site
+- 🔄 **SEARCH FUNCTIONALITY** - Under active investigation
+- ✅ **MULTI-MOD SELECTION FIXED** - Previously overwriting, now works correctly
 
-### Latest Improvements (Session 9.0 - Data Architecture Overhaul)
-1. **Discovered Natural Weapon Restrictions**: Found that the official game data already contains only valid weapon combinations
-2. **Extracted Complete Abyss Jewel Dataset**: Reduced from 1.5M line mods.json to focused ~28k line abyss-only dataset
-3. **Eliminated Complex Weapon Logic**: Removed all weapon restriction checking, variant generation, and regex parsing code
-4. **Verified Restriction Patterns**: Confirmed chaos damage only exists on claws, daggers, and bows; elemental damage on all weapons
-5. **Simplified Architecture**: Extension now uses pure data-driven approach with existing fuzzy search
+### 🔍 ACTIVE ISSUE: Life Regeneration Mods Not Appearing (v9.3)
 
-## 📧 RESOLVED ISSUES
+**Problem Statement**: When searching for "life", only maximum life mods appear. Life regeneration mods are not showing up despite being present in the dataset.
 
-### ✅ FIXED: Complex Weapon Restriction System (v8.0 - Now Obsolete)
-**Previous Problem**: Built complex system for weapon variant generation and restriction checking with regex parsing, compound mod detection, and dynamic text replacement.
+**Specific Case**: 
+- Mod: `AbyssFlatLifeRegenerationJewel1` 
+- Text: "Regenerate (9-12) Life per second"
+- Has valid spawn weights for all jewel types with weight > 0
 
-**Discovery**: The official game data (`mods.json` with domain: "abyss_jewel") already contains only valid weapon combinations:
-- **Chaos damage**: Only exists on claws, daggers, and bows (natural game restriction)  
-- **Elemental damage**: Exists on ALL weapons (no restrictions)
-- **Compound mods**: Already formatted correctly ("with Mace or Sceptre Attacks")
+### 🔍 ROOT CAUSE IDENTIFIED: Base Type Collision Bug (v9.3)
 
-**Resolution**: 
-- Extracted complete 28,000-line abyss jewel dataset from 1.5M-line source file
-- Eliminated all weapon restriction code, variant generation, and regex processing
-- Simplified to pure data-driven architecture using existing fuzzy search
+**CRITICAL DISCOVERY**: The search issue is caused by **base type collision** during mod aggregation, not search algorithm failure.
 
-### ✅ FIXED: Data Architecture Complexity
-**Problem**: Extension was generating weapon variants dynamically and checking restrictions at runtime.
+**Problem Identified**:
+Multiple life regeneration mods get assigned the **same base type** `"LifeRegeneration"`:
+- `AbyssFlatLifeRegenerationJewel1` (Player) → `"LifeRegeneration"`  
+- `AbyssFlatMinionLifeRegenerationJewel1` (Minion) → `"LifeRegeneration"`
+- `AbyssLifeRegenerationRateWhileMovingJewel1` (Moving) → `"LifeRegeneration"`
 
-**Solution**: 
-- Official data contains all valid combinations pre-generated
-- Extension now uses complete dataset with all weapon-specific mods included
-- Search finds exactly what exists in the game - no false positives or missing combinations
+**What Happens**:
+1. Player life regen mod gets processed first → stored as `relevantMods["LifeRegeneration"]`
+2. Minion life regen mod gets processed later → **overwrites** `relevantMods["LifeRegeneration"]`
+3. Final result: "LifeRegeneration" contains minion-specific text that doesn't match player "life" searches
 
-## 🔧 TECHNICAL ARCHITECTURE
+**Debug Evidence**:
+✅ Data loads correctly (548 mods)
+✅ Spawn weight filtering works (passes `hasJewelSpecificTag: true`)
+✅ Base type extraction works (correctly assigns `"LifeRegeneration"`)
+✅ Mod makes it to 102 processed base mods
+❌ **Gets overwritten by duplicate base types during aggregation**
 
-### File Structure
-```
-├── manifest.json          # Extension configuration
-├── popup.html            # Streamlined UI without speed controls  
-├── popup.js              # Clean fuzzy search with complete dataset
-├── content.js            # Ultra-speed trade site interaction
-├── background.js         # Tab management and messaging
-└── data/                 # Complete abyss jewel dataset
-    ├── abyss_jewels.json
-    └── all_abyss_jewel_mods.json    # NEW SOURCE OF TRUTH: Complete 28k line dataset
-```
+**Required Fix**:
+Make base types more specific in `extractBaseModType()`:
+- Player life regeneration → `"PlayerLifeRegeneration"`
+- Minion life regeneration → `"MinionLifeRegeneration"`  
+- Moving life regeneration → `"MovingLifeRegeneration"`
 
-### Key Components
+This will prevent different types of life regeneration mods from overwriting each other during the aggregation process.
 
-#### **all_abyss_jewel_mods.json** - Complete Official Dataset (NEW SOURCE OF TRUTH)
-- **28,000 lines** extracted from official 1.5M line `mods.json`
-- **All valid weapon combinations** pre-included
-- **Natural restrictions** enforced by data presence/absence
-- **Compound mods** already formatted correctly
-- **All tier variations** included for each mod
-- **Replaces previous smaller abyss_jewel_mods.json** as primary data source
+### Recent Changes Made (v9.2 → v9.3)
 
-#### **popup.js** - Simplified Search Logic
+**Spawn Weight Filtering Enhancement**:
 ```javascript
-// REMOVED: All weapon variant generation code
-// REMOVED: All weapon restriction checking  
-// REMOVED: All regex weapon text replacement
-// REMOVED: Compound mod generation logic
+// OLD: Accepted any "default" tag regardless of weight
+const hasDefaultTag = spawnWeight.tag === "default";
 
-// KEPT: Core fuzzy search functionality
-findMatchingMods()           // Clean search against complete dataset
-addSelectedModWithRange()    // Simple mod selection
-handleAutoFill()            // Direct auto-fill with existing mod text
+// NEW: Only accepts spawn weights with positive weight values
+if (!spawnWeight.weight || spawnWeight.weight <= 0) {
+  return false;
+}
 ```
 
-#### **Weapon Restriction Pattern Discovery**
+**Abbreviation System Fix**:
 ```javascript
-// Natural restrictions found in official data:
+// REMOVED: Overly restrictive expansion
+// life: "maximum life"  // This prevented "life regen" matches
 
-// Chaos damage - RESTRICTED (only these exist in data):
-"AbyssAddedChaosDamageWithDaggersJewel"  ✅
-"AbyssAddedChaosDamageWithClawsJewel"    ✅  
-"AbyssAddedChaosDamageWithBowsJewel"     ✅
-// Missing: Swords, Axes, Maces, Sceptres, Staves, Wands ❌
-
-// Fire damage - NO RESTRICTIONS (all exist in data):
-"AbyssAddedFireDamageWithDaggersJewel"   ✅
-"AbyssAddedFireDamageWithClawsJewel"     ✅
-"AbyssAddedFireDamageWithSwordsJewel"    ✅
-"AbyssAddedFireDamageWithAxesJewel"      ✅
-"AbyssAddedFireDamageWithMacesJewel"     ✅ (shows "with Mace or Sceptre Attacks")
-"AbyssAddedFireDamageWithStavesJewel"    ✅
-"AbyssAddedFireDamageWithBowsJewel"      ✅
-"AbyssAddedFireDamageWithWandsJewel"     ✅
+// KEPT: Specific abbreviations that don't interfere
+mana: "maximum mana",
+regen: "regeneration", 
+"life regen": "life regeneration"
 ```
 
-## 🎯 HOW THE SIMPLIFIED SYSTEM WORKS
+**Debug Output Cleanup**:
+- Removed verbose mod-by-mod checking logs
+- Removed base type extraction debugging
+- Kept essential search flow information
+- Console output now manageable for copy-paste analysis
 
-### Search Flow Examples
-1. **Chaos Search**: "chaos dagger"
-   - Finds "AbyssAddedChaosDamageWithDaggersJewel" in dataset
-   - Shows "(4-5) to (9-10) Added Chaos Damage with Dagger Attacks"
-   - Auto-fill sends exact text to trade site
+### 🔧 CURRENT DEBUGGING APPROACH
 
-2. **Chaos Search**: "chaos sword"  
-   - Finds NO results (doesn't exist in game data)
-   - User naturally learns valid combinations
+**Data Flow Analysis**:
+1. **Raw Data** (28k mods) → **Spawn Weight Filter** → **Tier Aggregation** → **Search Results**
+2. Need to verify each step for life regeneration mods specifically
 
-3. **Fire Search**: "fire sword"
-   - Finds "AbyssAddedFireDamageWithSwordsJewel" in dataset  
-   - Shows all tier variations available
-   - Auto-fill works perfectly
+**Key Debugging Questions**:
+- Are life regen mods passing spawn weight filtering?
+- Are they being properly aggregated into base types?
+- Are they making it into the final `availableMods` for search?
+- Is the search algorithm matching them correctly?
 
-4. **Mace/Sceptre**: "fire mace"
-   - Finds "AbyssAddedFireDamageWithMacesJewel"
-   - Shows "(5-6) to (11-12) Added Fire Damage with Mace or Sceptre Attacks"
-   - Compound text already correct in source data
+**Next Debugging Steps**:
+1. Add targeted debug output for life regeneration mods only
+2. Trace specific mod `AbyssFlatLifeRegenerationJewel1` through entire pipeline
+3. Compare working mods (maximum life) vs non-working (life regen) processing
 
-### Data Extraction Process
-```javascript
-// Extraction from 1.5M line mods.json:
-// 1. Filter for domain: "abyss_jewel" 
-// 2. Extract ~28,000 matching entries
-// 3. Include all weapon-specific variations
-// 4. Include all tier levels for each mod
-// 5. Natural restrictions preserved (missing combos don't exist)
-// 6. Save as all_abyss_jewel_mods.json (new source of truth)
-```
-
-## 📋 TESTING CHECKLIST
-
-### Basic Functionality Tests ✅
-- [x] Extension loads without errors
-- [x] Fuzzy search finds mods correctly ("life" finds life mods)
-- [x] Tier range selection works for all mod types
-- [x] Auto-fill populates trade site correctly
-- [x] All 6 mod slots function properly
-- [x] Settings persist between sessions
-
-### Data-Driven Search Tests ✅
-- [x] Chaos damage only appears for valid weapons (claws, daggers, bows)
-- [x] Fire/elemental damage appears for all weapons
-- [x] Partial searches work ("scep" shows sceptre mods) 
-- [x] Compound mods display correctly ("with Mace or Sceptre Attacks")
-- [x] No invalid weapon combinations appear in search results
-- [x] **All weapon-specific mods searchable without complex generation logic**
-
-### Auto-fill Validation Tests ✅
-- [x] Regular mods (non-weapon) auto-fill correctly
-- [x] All weapon-specific mods auto-fill with exact text from dataset
-- [x] Compound mods (mace/sceptre) auto-fill correctly
-- [x] Tier ranges work with all mod types
-- [x] Average damage calculation works correctly
-
-## 🔧 DEVELOPMENT NOTES
-
-### Critical Architecture Changes (v9.0)
-1. **New Source of Truth**: `all_abyss_jewel_mods.json` replaces previous smaller dataset
-2. **Eliminated Dynamic Generation**: No more runtime weapon variant creation
-3. **Pure Data-Driven**: Extension searches pre-existing complete dataset  
-4. **Natural Restrictions**: Game data enforces valid combinations by presence/absence
-5. **Simplified Codebase**: Removed thousands of lines of complex weapon logic
-
-### Data Management
-- **Source**: Official PoE `mods.json` filtered for `"domain": "abyss_jewel"`
-- **File**: `all_abyss_jewel_mods.json` (NEW SOURCE OF TRUTH)
-- **Size**: ~28,000 lines (reduced from 1.5M)
-- **Content**: All valid weapon/damage combinations with all tier levels
-- **Updates**: When PoE updates, re-extract from new `mods.json`
-
-### Code Cleanup Required
-The following legacy code should be **REMOVED** in next update:
-- All weapon variant generation functions
-- Weapon restriction checking logic  
-- Regex weapon text replacement
-- Compound mod detection and creation
-- Dynamic tier text adjustment for variants
-- References to old smaller `abyss_jewel_mods.json`
-
-### Data File Migration
-- **OLD**: Small `abyss_jewel_mods.json` (~500 lines) - OBSOLETE
-- **NEW**: Complete `all_abyss_jewel_mods.json` (~28,000 lines) - SOURCE OF TRUTH
-- Update all file references in code to use new filename
-
-## 🏆 PROJECT ACHIEVEMENTS
-
-The extension successfully:
-- **Operates at optimal speed** without user configuration complexity
-- **Provides clean, focused interface** without unnecessary controls  
-- **Prevents tier bleeding** through average damage calculation
-- **Supports precise tier ranges** with From/To selection
-- **Handles all damage formats** correctly using official game data
-- **Maintains 100% reliability** at ultra-speed operation
-- **Covers all valid mod combinations** using complete official dataset
-- **Supports partial weapon searches** for better UX
-- **Matches PoE exactly** - shows only combinations that exist in game
-- **Uses complete official dataset** as single source of truth
-
-## 📈 SUCCESS METRICS
-
-### Performance
-- ✅ 3x faster auto-fill completion
-- ✅ 100% reliability at ultra-speed
-- ✅ Enhanced search responsiveness with complete dataset
-- ✅ Perfect mod discoverability using official data
-
-### User Experience  
-- ✅ Intuitive, focused interface
-- ✅ Natural restriction learning (invalid combos simply don't appear)
-- ✅ Partial search support ("scep" → sceptre mods)
-- ✅ Clear tier range selection
-- ✅ **100% auto-fill reliability across all mod types**
-
-### Accuracy
-- ✅ Matches PoE's official game data exactly
-- ✅ No false positives (impossible combinations don't exist)
-- ✅ No missing combinations (complete dataset included)
-- ✅ Perfect tier bleeding prevention
-
-## 🔄 DEVELOPMENT FOCUS
-
-**Current Status**: Architecture overhaul complete - ready for code cleanup
-
-**Next Phase**: Remove legacy weapon generation code and optimize for new data-driven approach
-
-**Immediate Tasks**:
-1. Update all references from `abyss_jewel_mods.json` to `all_abyss_jewel_mods.json`
-2. Clean up popup.js to remove weapon variant generation
-3. Simplify search logic to work with complete dataset
-4. Remove complex weapon restriction checking
-5. Optimize performance with larger but complete dataset
-6. Update documentation to reflect simplified architecture
-
-**Future Enhancements**:
-- Additional jewel type support (if requested)
-- Advanced search filters (item level, corrupted status)
-- Bulk search capabilities
-- Integration with other PoE tools
-
-## 📄 CHANGELOG
-
-### Version 9.0 - Data Architecture Overhaul
-- 🔍 **Discovered natural weapon restrictions** in official game data
-- 📊 **Extracted complete abyss jewel dataset** (28k lines from 1.5M source)
-- 📁 **New source of truth**: `all_abyss_jewel_mods.json` replaces smaller dataset
-- 🗑️ **Eliminated complex weapon logic** (variant generation, restriction checking)
-- ✅ **Verified restriction patterns** (chaos damage limited, elemental unrestricted)
-- 🏗️ **Simplified to pure data-driven architecture**
-
-### Version 8.0 - Compound Mod Support (Now Legacy)
-- ✅ Fixed auto-fill for all generated weapon variants
-- ✅ Added compound mod support for mace/sceptre combinations
-- ✅ Updated popup display to show correct compound mod names
-- ✅ Enhanced debugging and error handling
-- ✅ Code cleanup and optimization
-
-### Version 7.0 - Enhanced Weapon Standardization (Legacy)
-- ✅ Weapon variant generation system
-- ✅ Partial weapon search support
-- ✅ Multiple weapon variant handling
-
-This bootstrap document provides complete context for the simplified data-driven extension architecture with `all_abyss_jewel_mods.json` as the new source of truth, ready for code cleanup and optimization.
+## 📋 RESOLVED ISSUES
