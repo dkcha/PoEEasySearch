@@ -1,9 +1,9 @@
-// PoE Easy Search - Content Script (Ultra-Speed Data-Driven v9.0)
+// PoE Easy Search - Content Script (Ultra-Speed Data-Driven v10.0 - Instant Auto-fill)
 console.log("🎯 PoE Easy Search content script loading...");
 
-// Ultra-speed timing (0.3x multiplier applied)
+// Ultra-speed timing (reduced delays for instant operation)
 const wait = (ms) =>
-  new Promise((resolve) => setTimeout(resolve, ms * 0.3 + Math.random() * 30));
+  new Promise((resolve) => setTimeout(resolve, ms * 0.1 + Math.random() * 10));
 
 // === GLOBAL STATE - SIMPLIFIED ===
 let allAbyssModsData = null;
@@ -141,24 +141,109 @@ function mapModToTradeStat(modName, mod) {
   return mapping || modName;
 }
 
+// === INSTANT VALUE SETTING FUNCTIONS ===
+function setInputValueInstantly(input, value) {
+  if (!input || input.disabled) return false;
+
+  // Store original value for comparison
+  const originalValue = input.value;
+
+  // Method 1: Direct value assignment
+  input.value = value;
+
+  // Method 2: Use native property descriptor (for React/Vue)
+  try {
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value"
+    ).set;
+    nativeInputValueSetter.call(input, value);
+  } catch (e) {
+    console.warn("Native setter failed, using standard assignment");
+  }
+
+  // Method 3: Trigger Vue/React reactivity with comprehensive events
+  const events = [
+    new Event("input", { bubbles: true, cancelable: true }),
+    new Event("change", { bubbles: true, cancelable: true }),
+    new InputEvent("input", {
+      bubbles: true,
+      cancelable: true,
+      inputType: "insertText",
+      data: value,
+    }),
+    new Event("blur", { bubbles: true }),
+  ];
+
+  events.forEach((event) => input.dispatchEvent(event));
+
+  // Verify the value was set
+  return input.value === value;
+}
+
+function selectDropdownOptionInstantly(targetText, optionSelectors = []) {
+  const defaultSelectors = [
+    ".multiselect__option:not(.multiselect__option--disabled)",
+    ".dropdown-option",
+    "[role='option']",
+    ".option",
+  ];
+
+  const selectors =
+    optionSelectors.length > 0 ? optionSelectors : defaultSelectors;
+
+  for (const selector of selectors) {
+    const options = document.querySelectorAll(selector);
+
+    for (const option of options) {
+      const optionText = option.textContent.trim().toLowerCase();
+      const searchText = targetText.toLowerCase();
+
+      if (
+        optionText === searchText ||
+        optionText.includes(searchText) ||
+        searchText.includes(optionText)
+      ) {
+        console.log(
+          `✅ Instantly selecting option: "${option.textContent.trim()}"`
+        );
+
+        // Trigger click without delays
+        option.scrollIntoView({ block: "nearest" });
+        option.click();
+
+        // Dispatch additional events if needed
+        option.dispatchEvent(new Event("mousedown", { bubbles: true }));
+        option.dispatchEvent(new Event("mouseup", { bubbles: true }));
+
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 // === MAIN AUTO-FILL HANDLER ===
 async function handleAutoFill(config) {
-  console.log("🔍 Starting auto-fill with config:", config);
+  console.log("🔍 Starting instant auto-fill with config:", config);
 
   try {
     await loadModsData();
     await waitForPageReady();
     await clearExistingSearch();
-    await setBaseItemType(config.jewelType);
+    await setBaseItemTypeInstantly(config.jewelType);
 
     if (config.searchMode === "with-mods" && config.selectedMods?.length > 0) {
-      console.log("🔧 Adding", config.selectedMods.length, "mod filters...");
-      await addModFilters(config.selectedMods);
+      console.log(
+        "🔧 Adding",
+        config.selectedMods.length,
+        "mod filters instantly..."
+      );
+      await addModFiltersInstantly(config.selectedMods);
     }
 
-    console.log(
-      "✅ Form prepared. Please click search manually to avoid bot detection."
-    );
+    console.log("✅ Form configured instantly. Ready for search.");
     return {
       success: true,
       message: `Successfully configured search for ${
@@ -166,13 +251,13 @@ async function handleAutoFill(config) {
       }`,
     };
   } catch (error) {
-    console.error("❌ Auto-fill failed:", error);
+    console.error("❌ Instant auto-fill failed:", error);
     throw new Error(`Auto-fill failed: ${error.message}`);
   }
 }
 
-// === BASE ITEM SELECTION ===
-async function setBaseItemType(jewelType) {
+// === INSTANT BASE ITEM SELECTION ===
+async function setBaseItemTypeInstantly(jewelType) {
   const displayName = CONFIG.JEWEL_MAPPINGS[jewelType];
   if (!displayName) throw new Error(`Unknown jewel type: ${jewelType}`);
 
@@ -182,108 +267,59 @@ async function setBaseItemType(jewelType) {
   );
   if (!searchInput) throw new Error("Could not find base item search field");
 
-  const rect = searchInput.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) {
-    await wait(300);
-  }
+  console.log("⚡ Setting base item instantly:", displayName);
 
-  await interactWithVueMultiselect(searchInput, displayName);
-  await wait(150);
+  // Focus the input
+  searchInput.focus();
+  searchInput.click();
 
-  // Verify selection
-  const selectedItems = document.querySelectorAll(
-    '.multiselect__single, .multiselect__tag, [class*="selected"]'
-  );
-  const valueSet = Array.from(selectedItems).some((item) =>
-    item.textContent.includes(displayName)
-  );
+  // Set value instantly
+  const valueSet = setInputValueInstantly(searchInput, displayName);
 
   if (!valueSet) {
-    console.warn(
-      "⚠️ Base item may not have been set correctly, attempting retry..."
-    );
-    await wait(300);
-    await interactWithVueMultiselect(searchInput, displayName);
-  }
-  console.log("✅ Base item type set:", displayName);
-}
-
-async function interactWithVueMultiselect(input, searchText) {
-  input.scrollIntoView({ behavior: "instant", block: "center" });
-  await wait(30);
-
-  input.focus();
-  input.click();
-  await wait(30);
-
-  // Instant fill for ultra speed
-  input.value = searchText;
-
-  // Try native setter
-  try {
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      "value"
-    ).set;
-    nativeInputValueSetter.call(input, searchText);
-  } catch (e) {
-    console.warn("Native setter failed:", e);
+    throw new Error("Failed to set base item value");
   }
 
-  // Dispatch events
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-  input.dispatchEvent(
-    new InputEvent("input", {
-      bubbles: true,
-      cancelable: true,
-      inputType: "insertText",
-      data: searchText,
-    })
-  );
+  // Short wait for dropdown to appear
+  await wait(100);
 
-  await wait(120);
+  // Select from dropdown instantly
+  const optionSelected = selectDropdownOptionInstantly(displayName);
 
-  const optionSelected = await selectVueMultiselectOption(searchText);
   if (!optionSelected) {
-    input.dispatchEvent(
+    // Fallback: trigger Enter key
+    searchInput.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
-    await wait(30);
   }
+
+  // Brief verification wait
+  await wait(50);
+  console.log("✅ Base item type set instantly:", displayName);
 }
 
-async function selectVueMultiselectOption(targetText) {
-  const options = document.querySelectorAll(".multiselect__option");
-  for (const option of options) {
-    const optionText = option.textContent.trim();
-    if (optionText.toLowerCase().includes(targetText.toLowerCase())) {
-      console.log("✅ Found matching option:", optionText);
-      option.click();
-      await wait(150);
-      return true;
-    }
-  }
-  return false;
-}
-
-// === MOD FILTER ADDITION - SIMPLIFIED ===
-async function addModFilters(selectedMods) {
+// === INSTANT MOD FILTER ADDITION ===
+async function addModFiltersInstantly(selectedMods) {
   for (let i = 0; i < selectedMods.length; i++) {
     const mod = selectedMods[i];
-    console.log(`🔧 Adding mod ${i + 1}/${selectedMods.length}:`, mod.modName);
+    console.log(
+      `🔧 Adding mod ${i + 1}/${selectedMods.length} instantly:`,
+      mod.modName
+    );
 
     try {
-      await addSingleModFilter(mod, i);
-      await wait(180);
+      await addSingleModFilterInstantly(mod, i);
+      await wait(50); // Minimal wait between mods
     } catch (error) {
       console.error(`❌ Failed to add mod ${mod.modName}:`, error);
     }
   }
 }
 
-async function addSingleModFilter(mod, filterIndex) {
-  console.log(`🔥 Creating stat filter ${filterIndex + 1} for: ${mod.modName}`);
+async function addSingleModFilterInstantly(mod, filterIndex) {
+  console.log(
+    `🔥 Creating stat filter ${filterIndex + 1} instantly for: ${mod.modName}`
+  );
 
   // Find the "Add Stat Filter" button
   let addStatButton = null;
@@ -326,48 +362,52 @@ async function addSingleModFilter(mod, filterIndex) {
 
   // Use the exact mod text from the complete dataset
   const tradeSiteStat = mapModToTradeStat(mod.modName, mod);
-  console.log(`🔥 Using trade site stat: "${tradeSiteStat}"`);
+  console.log(`🔥 Using trade site stat instantly: "${tradeSiteStat}"`);
 
   if (addStatButton.tagName === "BUTTON") {
     addStatButton.click();
-    await wait(120);
+    await wait(50); // Minimal wait for UI update
 
     const statInput = document.querySelector(
       'input[placeholder*="Add Stat Filter"], .multiselect__input:last-of-type'
     );
     if (statInput) {
-      await interactWithStatInput(statInput, tradeSiteStat);
+      await setStatInputInstantly(statInput, tradeSiteStat);
     } else {
       throw new Error("No stat input appeared after clicking Add Stat Filter");
     }
   } else if (addStatButton.tagName === "INPUT") {
-    await interactWithStatInput(addStatButton, tradeSiteStat);
+    await setStatInputInstantly(addStatButton, tradeSiteStat);
   }
 
-  await wait(240);
+  await wait(100); // Brief wait for filter creation
   const verifyFilter = await verifyStatFilterCreated(tradeSiteStat);
   if (!verifyFilter) {
     throw new Error("Failed to create stat filter");
   }
 
-  await setModValuesInLatestFilter(mod);
+  await setModValuesInstantly(mod);
 }
 
-async function interactWithStatInput(input, tradeSiteStat) {
+async function setStatInputInstantly(input, tradeSiteStat) {
   input.focus();
   input.click();
-  await wait(45);
 
-  input.value = "";
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  await wait(30);
+  // Clear and set value instantly
+  const valueSet = setInputValueInstantly(input, tradeSiteStat);
 
-  // Instant fill for ultra speed
-  input.value = tradeSiteStat;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  await wait(180);
+  if (!valueSet) {
+    throw new Error("Failed to set stat input value");
+  }
 
-  const optionSelected = await selectFromStatDropdown(tradeSiteStat);
+  await wait(80); // Wait for dropdown
+
+  const optionSelected = selectDropdownOptionInstantly(tradeSiteStat, [
+    ".search-advanced-pane.brown .multiselect__option:not(.multiselect__option--disabled)",
+    '[class*="stat"] .multiselect__option:not(.multiselect__option--disabled)',
+    ".multiselect__option:not(.multiselect__option--disabled)",
+  ]);
+
   if (!optionSelected) {
     input.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -376,81 +416,11 @@ async function interactWithStatInput(input, tradeSiteStat) {
         code: "Enter",
       })
     );
-    await wait(75);
   }
-}
-
-async function selectFromStatDropdown(targetText) {
-  console.log("🔍 Looking for STAT dropdown option:", targetText);
-  await wait(120);
-
-  const statDropdownSelectors = [
-    ".search-advanced-pane.brown .multiselect__option:not(.multiselect__option--disabled)",
-    '[class*="stat"] .multiselect__option:not(.multiselect__option--disabled)',
-    ".multiselect__option:not(.multiselect__option--disabled)",
-  ];
-
-  let foundOptions = [];
-
-  for (const selector of statDropdownSelectors) {
-    const options = document.querySelectorAll(selector);
-    const statOptions = Array.from(options).filter((option) => {
-      const optionText = option.textContent.toLowerCase();
-      const isItemName =
-        optionText.includes("amulet") ||
-        optionText.includes("ring") ||
-        optionText.includes("belt") ||
-        optionText.includes("boots") ||
-        optionText.match(/^\w+ \w+ \w+$/);
-      const isStatLike =
-        optionText.includes("damage") ||
-        optionText.includes("resistance") ||
-        optionText.includes("life") ||
-        optionText.includes("mana") ||
-        optionText.includes("#") ||
-        optionText.includes("%");
-      return !isItemName || isStatLike;
-    });
-
-    if (statOptions.length > 0) {
-      foundOptions = statOptions;
-      break;
-    }
-  }
-
-  if (foundOptions.length === 0) return false;
-
-  const lowerTargetText = targetText.toLowerCase();
-
-  for (const option of foundOptions.slice(0, 50)) {
-    let optionText = "";
-    const spans = option.querySelectorAll("span");
-    if (spans.length > 0) {
-      optionText = spans[spans.length - 1].textContent.trim();
-    } else {
-      optionText = option.textContent.trim();
-    }
-
-    const lowerOptionText = optionText.toLowerCase();
-    const isExactMatch = lowerOptionText === lowerTargetText;
-    const containsMatch =
-      lowerOptionText.includes(lowerTargetText) ||
-      lowerTargetText.includes(lowerOptionText);
-
-    if (isExactMatch || containsMatch) {
-      console.log(`✅ Found matching STAT option: "${optionText}"`);
-      option.scrollIntoView({ block: "nearest" });
-      await wait(15);
-      option.click();
-      await wait(30);
-      return true;
-    }
-  }
-  return false;
 }
 
 async function verifyStatFilterCreated(expectedStat) {
-  await wait(300);
+  await wait(100);
 
   const statFiltersSection = document.querySelector(
     ".search-advanced-pane.brown"
@@ -476,14 +446,13 @@ async function verifyStatFilterCreated(expectedStat) {
   );
 }
 
-async function setModValuesInLatestFilter(mod) {
-  console.log("📊 Setting values for latest filter:", mod.modName);
+async function setModValuesInstantly(mod) {
+  console.log("📊 Setting values instantly for latest filter:", mod.modName);
 
   let minValue = mod.minValue;
   let maxValue = mod.maxValue;
 
   console.log(`✅ Using values: min=${minValue}, max=${maxValue}`);
-  await wait(60);
 
   const statFilterContainers = document.querySelectorAll(
     ".search-advanced-pane.brown .filter.full-span, .filter-group .filter.full-span"
@@ -502,33 +471,21 @@ async function setModValuesInLatestFilter(mod) {
   );
 
   if (minInput && minValue !== undefined) {
-    await clearAndFillInput(minInput, minValue.toString());
-    console.log("✅ Min value set:", minValue);
+    const success = setInputValueInstantly(minInput, minValue.toString());
+    if (success) {
+      console.log("✅ Min value set instantly:", minValue);
+    }
   }
 
   if (maxInput && maxValue !== undefined) {
-    await clearAndFillInput(maxInput, maxValue.toString());
-    console.log("✅ Max value set:", maxValue);
+    const success = setInputValueInstantly(maxInput, maxValue.toString());
+    if (success) {
+      console.log("✅ Max value set instantly:", maxValue);
+    }
   }
 }
 
 // === HELPER FUNCTIONS ===
-async function clearAndFillInput(input, value) {
-  if (
-    input.disabled ||
-    input.closest('.currency, .currency-section, [class*="currency"]')
-  ) {
-    return;
-  }
-
-  input.focus();
-  input.value = value;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
-  input.dispatchEvent(new Event("blur", { bubbles: true }));
-  await wait(15);
-}
-
 async function findElementWithFallback(selectors, timeout = 5000) {
   const selectorArray = Array.isArray(selectors) ? selectors : [selectors];
 
@@ -568,8 +525,8 @@ async function waitForPageReady() {
       throw new Error("Not on Path of Exile trade site");
     }
 
-    // Ultra speed wait
-    await wait(900);
+    // Minimal wait for instant operation
+    await wait(300);
 
     const searchInput = document.querySelector(
       '.search-select input[type="text"], input[placeholder*="Search Items"], .multiselect__input'
@@ -593,11 +550,11 @@ async function waitForPageReady() {
 async function clearExistingSearch() {
   const clearButton = await findElementWithFallback(
     ['button[title*="Clear"]', ".clear-all-button"],
-    2000
+    1000
   );
   if (clearButton) {
     clearButton.click();
-    await wait(300);
+    await wait(100); // Minimal wait
   }
 }
 
@@ -615,10 +572,10 @@ if (document.readyState === "loading") {
 }
 
 function initializeContentScript() {
-  console.log("✅ Content script initialized");
+  console.log("✅ Content script initialized for instant auto-fill");
 
   loadModsData().then(() => {
-    console.log("✅ Content script ready");
+    console.log("✅ Content script ready for instant operation");
   });
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -646,5 +603,5 @@ window.findModMapping = findModMapping;
 window.modMappings = modMappings;
 
 console.log(
-  "✅ PoE Easy Search content script loaded successfully - Data-Driven v9.0"
+  "✅ PoE Easy Search content script loaded - Instant Auto-fill v10.0"
 );

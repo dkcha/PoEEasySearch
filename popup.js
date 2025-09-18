@@ -696,47 +696,65 @@ function updateTierRangeInfo() {
 
   const fromTier = elements.tierFromSelect.value;
   const toTier = elements.tierToSelect.value;
-
-  const fromIndex = parseInt(fromTier.replace("T", ""));
-  const toIndex = parseInt(toTier.replace("T", ""));
-
-  if (fromIndex < toIndex) {
-    elements.tierToSelect.value = fromTier;
-    return;
-  }
-
   const isExactTier = fromTier === toTier;
-  const tierData = currentModForTierSelection.tiers[fromTier];
+
+  const fromTierData = currentModForTierSelection.tiers[fromTier];
   const toTierData = currentModForTierSelection.tiers[toTier];
-  const modText = tierData.text || currentModForTierSelection.name;
+  const modText = fromTierData.text || currentModForTierSelection.name;
+
+  // Check if we're dealing with the lowest available tier
+  const tierKeys = Object.keys(currentModForTierSelection.tiers);
+  const lowestTier = tierKeys[tierKeys.length - 1];
+  const isLowestTierSearch = fromTier === lowestTier || toTier === lowestTier;
+
+  // Determine value ranges for display
+  const fromTierNum = parseInt(fromTier.replace("T", ""));
+  const toTierNum = parseInt(toTier.replace("T", ""));
+
+  let minDisplayValue, maxDisplayValue;
+
+  if (isLowestTierSearch) {
+    minDisplayValue = 0;
+    maxDisplayValue = isExactTier
+      ? fromTierData.max
+      : Math.max(fromTierData.max, toTierData.max);
+  } else if (isExactTier) {
+    minDisplayValue = fromTierData.min;
+    maxDisplayValue = fromTierData.max;
+  } else {
+    // For ranges, show the full span from lowest to highest values
+    if (fromTierNum > toTierNum) {
+      // T4-T3: min from T4, max from T3
+      minDisplayValue = fromTierData.min;
+      maxDisplayValue = toTierData.max;
+    } else {
+      // T3-T4: min from T4, max from T3
+      minDisplayValue = toTierData.min;
+      maxDisplayValue = fromTierData.max;
+    }
+  }
 
   let infoText = "";
 
   if (isExactTier) {
-    infoText = `<span class="tier-range-highlight">Exact ${fromTier}</span> - Values: ${tierData.min}-${tierData.max}`;
-    if (isFlatAddedDamageMod(modText)) {
-      infoText += ` <br><small style="color: #888;">(No averaging for exact tier)</small>`;
+    if (isLowestTierSearch) {
+      infoText = `<span class="tier-range-highlight">Exact ${fromTier}</span> - Search Range: ${minDisplayValue}-${maxDisplayValue}`;
+      infoText += ` <br><small style="color: #4CAF50;">No minimum set for lowest tier search</small>`;
+    } else {
+      infoText = `<span class="tier-range-highlight">Exact ${fromTier}</span> - Values: ${minDisplayValue}-${maxDisplayValue}`;
     }
   } else {
-    const cappedMax = calculateCappedMaxValue(
-      currentModForTierSelection,
-      toTier,
-      toTierData
-    );
-    const isCapped = cappedMax < toTierData.max;
-
-    infoText = `<span class="tier-range-highlight">${fromTier} to ${toTier}</span> - Range: ${tierData.min}-${cappedMax}`;
-
-    if (isCapped) {
-      infoText += ` <br><small style="color: #ff9800;">Max capped to avoid ${getPrevTier(
-        toTier
-      )} items</small>`;
+    const tierDisplay = `${fromTier} to ${toTier}`;
+    if (isLowestTierSearch) {
+      infoText = `<span class="tier-range-highlight">${tierDisplay}</span> - Search Range: ${minDisplayValue}-${maxDisplayValue}`;
+      infoText += ` <br><small style="color: #4CAF50;">No minimum set - includes lowest tier</small>`;
+    } else {
+      infoText = `<span class="tier-range-highlight">${tierDisplay}</span> - Range: ${minDisplayValue}-${maxDisplayValue}`;
     }
+  }
 
-    if (isFlatAddedDamageMod(modText)) {
-      const average = Math.round((tierData.min + tierData.max) / 2);
-      infoText += ` <br><small style="color: #4CAF50;">Damage averaging: ${average}-${cappedMax}</small>`;
-    }
+  if (isFlatAddedDamageMod(modText) && !isLowestTierSearch && !isExactTier) {
+    infoText += ` <br><small style="color: #4CAF50;">Damage mods use averaged minimum values</small>`;
   }
 
   elements.tierRangeInfo.innerHTML = infoText;
@@ -808,7 +826,6 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
   const baseModType =
     mod.baseModType || mod.modId || extractBaseModType(mod.modId, mod.text);
 
-  // Check if this exact base mod type already exists
   const existingIndex = selectedMods.findIndex(
     (selected) => selected.baseModType === baseModType
   );
@@ -817,29 +834,107 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
   const toTierData = mod.tiers[toTier];
   const isExactTier = fromTier === toTier;
 
-  // Calculate search values with tier bleeding prevention
+  const tierKeys = Object.keys(mod.tiers);
+  const lowestTier = tierKeys[tierKeys.length - 1];
+  const isLowestTierSearch = fromTier === lowestTier || toTier === lowestTier;
+
+  const fromTierNum = parseInt(fromTier.replace("T", ""));
+  const toTierNum = parseInt(toTier.replace("T", ""));
+
+  let lowerValueTier, higherValueTier, lowerValueTierData, higherValueTierData;
+
+  if (fromTierNum > toTierNum) {
+    lowerValueTier = fromTier;
+    higherValueTier = toTier;
+    lowerValueTierData = fromTierData;
+    higherValueTierData = toTierData;
+  } else {
+    lowerValueTier = toTier;
+    higherValueTier = fromTier;
+    lowerValueTierData = toTierData;
+    higherValueTierData = fromTierData;
+  }
+
   const modTextForCheck = fromTierData.text || mod.text || mod.name;
-  const searchValues = calculateSearchValues(
-    fromTierData,
-    modTextForCheck,
-    isExactTier,
-    fromTier,
-    toTier
+
+  let finalMinValue,
+    finalMaxValue,
+    wasAveraged = false,
+    wasCapped = false;
+
+  if (isLowestTierSearch) {
+    finalMinValue = 0;
+    finalMaxValue = Math.max(fromTierData.max, toTierData.max);
+    wasAveraged = false;
+  } else if (isExactTier) {
+    if (isFlatAddedDamageMod(modTextForCheck)) {
+      // For exact tier damage mods, use the averaged damage range
+      const damageRange = calculateDamageRange(fromTierData);
+      finalMinValue = damageRange.min;
+      finalMaxValue = damageRange.max;
+      wasAveraged = true;
+    } else {
+      finalMinValue = fromTierData.min;
+      finalMaxValue = fromTierData.max;
+      wasAveraged = false;
+    }
+  } else {
+    // Range search
+    if (isFlatAddedDamageMod(modTextForCheck)) {
+      // FIXED: For damage mod ranges, use averaged values from each tier
+      const lowerDamageRange = calculateDamageRange(lowerValueTierData);
+      const higherDamageRange = calculateDamageRange(higherValueTierData);
+
+      finalMinValue = lowerDamageRange.min; // T4 averaged min (9)
+      finalMaxValue = higherDamageRange.max; // T3 averaged max (12)
+      wasAveraged = true;
+    } else {
+      finalMinValue = lowerValueTierData.min;
+      finalMaxValue = higherValueTierData.max;
+      wasAveraged = false;
+    }
+  }
+
+  console.log("=== MOD VALUE DEBUG ===");
+  console.log("Mod name:", mod.name);
+  console.log("Selection: fromTier =", fromTier, "toTier =", toTier);
+  console.log(
+    "lowerValueTier:",
+    lowerValueTier,
+    "- text:",
+    lowerValueTierData.text
+  );
+  console.log(
+    "higherValueTier:",
+    higherValueTier,
+    "- text:",
+    higherValueTierData.text
   );
 
-  let finalMinValue = searchValues.min;
-  let finalMaxValue = isExactTier ? searchValues.max : toTierData.max;
-
-  if (!isExactTier && isFlatAddedDamageMod(modTextForCheck)) {
-    const toTierAvg = Math.round((toTierData.min + toTierData.max) / 2);
-    finalMaxValue = toTierAvg;
+  if (isFlatAddedDamageMod(modTextForCheck)) {
+    const lowerDamageRange = calculateDamageRange(lowerValueTierData);
+    const higherDamageRange = calculateDamageRange(higherValueTierData);
+    console.log(
+      "Lower tier averaged damage:",
+      lowerDamageRange.min,
+      "-",
+      lowerDamageRange.max
+    );
+    console.log(
+      "Higher tier averaged damage:",
+      higherDamageRange.min,
+      "-",
+      higherDamageRange.max
+    );
   }
 
-  // Apply capping
-  if (!isExactTier) {
-    const cappedMax = calculateCappedMaxValue(mod, toTier, toTierData);
-    finalMaxValue = Math.min(finalMaxValue, cappedMax);
-  }
+  console.log(
+    "FINAL: finalMinValue =",
+    finalMinValue,
+    ", finalMaxValue =",
+    finalMaxValue
+  );
+  console.log("=== END DEBUG ===");
 
   const modData = {
     modId: mod.modId,
@@ -852,9 +947,10 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
     tierData: fromTierData,
     minValue: finalMinValue,
     maxValue: finalMaxValue,
-    wasAveraged: searchValues.wasAveraged,
-    wasCapped: finalMaxValue < toTierData.max,
+    wasAveraged: wasAveraged,
+    wasCapped: wasCapped,
     isExactTier: isExactTier,
+    isLowestTierSearch: isLowestTierSearch,
     originalText: fromTierData.text || mod.text,
   };
 
@@ -873,14 +969,40 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
   clearSearchInput();
 
   const tierDisplay = isExactTier ? fromTier : `${fromTier}-${toTier}`;
-  const averageIndicator = searchValues.wasAveraged ? " (averaged)" : "";
-  const cappedIndicator = modData.wasCapped ? " (capped)" : "";
+  const averageIndicator = wasAveraged ? " (averaged)" : "";
   const actionText = existingIndex !== -1 ? "Updated" : "Added";
 
   showStatusMessage(
-    `${actionText} ${mod.name} (${tierDisplay})${averageIndicator}${cappedIndicator}`,
+    `${actionText} ${mod.name} (${tierDisplay})${averageIndicator}`,
     "success"
   );
+}
+
+function calculateDamageRange(tierData) {
+  // For damage mods like "(6-7) to (11-13)", calculate the actual damage range
+  // The game averages the two numbers: (6+11)/2 to (7+13)/2 = 8.5 to 10
+  const text = tierData.text;
+
+  // Extract the two damage ranges
+  const damageRangeMatch = text.match(
+    /\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\) to \((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)/
+  );
+
+  if (damageRangeMatch) {
+    const lowMin = parseFloat(damageRangeMatch[1]); // 6
+    const lowMax = parseFloat(damageRangeMatch[2]); // 7
+    const highMin = parseFloat(damageRangeMatch[3]); // 11
+    const highMax = parseFloat(damageRangeMatch[4]); // 13
+
+    // Calculate the actual damage range by averaging (keep as floats for precision)
+    const actualMin = (lowMin + highMin) / 2; // (6+11)/2 = 8.5
+    const actualMax = (lowMax + highMax) / 2; // (7+13)/2 = 10
+
+    return { min: actualMin, max: actualMax };
+  }
+
+  // Fallback to tier data min/max if parsing fails
+  return { min: tierData.min, max: tierData.max };
 }
 
 function calculateSearchValues(
@@ -888,8 +1010,29 @@ function calculateSearchValues(
   modText,
   isExactTier,
   fromTier,
-  toTier
+  toTier,
+  isLowestTierSearch = false
 ) {
+  // For lowest tier searches, don't set a minimum value
+  if (isLowestTierSearch) {
+    if (isExactTier) {
+      // Exact lowest tier: min = 0, max = tier max
+      return {
+        min: 0,
+        max: tierData.max,
+        wasAveraged: false,
+      };
+    } else {
+      // Range including lowest tier: min = 0, max = tier max (no averaging for ranges including lowest)
+      return {
+        min: 0,
+        max: tierData.max,
+        wasAveraged: false,
+      };
+    }
+  }
+
+  // For non-lowest tier searches, use original logic
   if (isExactTier) {
     if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
       const avgDamage = Math.round((tierData.min + tierData.max) / 2);
@@ -898,11 +1041,12 @@ function calculateSearchValues(
     return { min: tierData.min, max: tierData.max, wasAveraged: false };
   }
 
+  // Range searches for non-lowest tiers
   if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
     const avgDamage = Math.round((tierData.min + tierData.max) / 2);
     return {
       min: avgDamage,
-      max: tierData.max,
+      max: tierData.max, // Use fromTier max, toTier max will be applied later
       wasAveraged: true,
       avgDamage: avgDamage,
     };
