@@ -1,44 +1,36 @@
-// PoE Easy Search - Content Script (Ultra-Speed Data-Driven v10.0 - Instant Auto-fill)
-console.log("🎯 PoE Easy Search content script loading...");
-
-// Ultra-speed timing (reduced delays for instant operation)
+// PoE Easy Search Content Script v13.1
+// Utility function for random delays to avoid detection
 const wait = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms * 0.1 + Math.random() * 10));
 
-// === GLOBAL STATE - SIMPLIFIED ===
+// Global state management
 let allAbyssModsData = null;
 let modMappings = {};
 
-// === DATA LOADING - SIMPLIFIED ===
+// Load mod data from GitHub repository
 async function loadModsData() {
   if (allAbyssModsData) return true;
 
   try {
-    console.log("📂 Loading complete abyss jewel dataset...");
-    const response = await fetch(CONFIG.GITHUB_URLS.ALL_ABYSS_MODS);
-
-    if (!response.ok) {
-      throw new Error("Failed to load complete abyss jewel dataset");
-    }
-
-    allAbyssModsData = await response.json();
+    const url =
+      "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/all_abyss_jewel_mods.json";
+    const response = await fetch(url);
+    const data = await response.json();
+    allAbyssModsData = data;
     createSimpleModMappings();
-    console.log("✅ Complete mod dataset loaded successfully");
     return true;
   } catch (error) {
-    console.error("❌ Failed to load mod data:", error);
+    console.error("Failed to load mod data:", error);
     createFallbackMappings();
     return false;
   }
 }
 
+// Create mappings for mod text matching and normalization
 function createSimpleModMappings() {
   if (!allAbyssModsData) return;
 
   modMappings = {};
-  let mappingCount = 0;
-
-  // Create simple mappings from the complete dataset
   Object.entries(allAbyssModsData).forEach(([modId, modData]) => {
     if (!modData.text) return;
 
@@ -50,9 +42,7 @@ function createSimpleModMappings() {
       stats: modData.stats,
       required_level: modData.required_level,
     };
-    mappingCount++;
 
-    // Also map by the raw text
     modMappings[modData.text.toLowerCase()] = {
       modId: modId,
       originalText: modData.text,
@@ -60,51 +50,40 @@ function createSimpleModMappings() {
       stats: modData.stats,
       required_level: modData.required_level,
     };
-    mappingCount++;
   });
-
-  console.log(
-    `✅ Created ${mappingCount} simple mod mappings from complete dataset`
-  );
 }
 
-// === UTILITY FUNCTIONS - SIMPLIFIED ===
+// Convert specific mod values to generic placeholders for trade site matching
 function genericizeModText(modText) {
   if (!modText) return "";
-
   return modText
-    .replace(/\(\d+-\d+\)/g, "#") // Replace (12-15) with #
-    .replace(/\b\d+\b/g, "#") // Replace standalone numbers
-    .replace(/\+#/g, "+#") // Normalize + signs
-    .replace(/\s+/g, " ") // Normalize whitespace
+    .replace(/\(\d+-\d+\)/g, "#")
+    .replace(/\b\d+\b/g, "#")
+    .replace(/\+#/g, "+#")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
+// Find matching mod text from our dataset
 function findModMapping(searchTerm) {
   if (!modMappings) return null;
 
   const lowerSearchTerm = searchTerm.toLowerCase();
 
-  // Direct match
   if (modMappings[lowerSearchTerm]) {
     return modMappings[lowerSearchTerm].searchText;
   }
 
-  // Try genericized version
   const genericizedSearchTerm = genericizeModText(searchTerm);
   if (modMappings[genericizedSearchTerm.toLowerCase()]) {
     return genericizedSearchTerm;
   }
 
-  // Fuzzy matching for partial matches
   for (const [pattern, modData] of Object.entries(modMappings)) {
     if (
       pattern.includes(lowerSearchTerm) ||
       lowerSearchTerm.includes(pattern)
     ) {
-      console.log(
-        `✅ Fuzzy match found: "${searchTerm}" → "${modData.searchText}"`
-      );
       return modData.searchText;
     }
   }
@@ -112,6 +91,7 @@ function findModMapping(searchTerm) {
   return null;
 }
 
+// Fallback mod mappings if data loading fails
 function createFallbackMappings() {
   modMappings = {
     "added life": "+# to maximum Life",
@@ -126,32 +106,23 @@ function createFallbackMappings() {
     "lightning resistance": "+#% to Lightning Resistance",
     "chaos resistance": "+#% to Chaos Resistance",
   };
-  console.log("✅ Fallback mappings created");
 }
 
+// Map mod names to trade site stat text
 function mapModToTradeStat(modName, mod) {
-  // Use the exact text from the complete dataset when available
   if (mod && mod.searchText) {
-    console.log(`✅ Using exact mod text from dataset: ${mod.searchText}`);
     return mod.searchText;
   }
-
-  // Fallback to mapping lookup
   const mapping = findModMapping(modName);
   return mapping || modName;
 }
 
-// === INSTANT VALUE SETTING FUNCTIONS ===
+// Set input values with proper event triggering for Vue/React compatibility
 function setInputValueInstantly(input, value) {
   if (!input || input.disabled) return false;
 
-  // Store original value for comparison
-  const originalValue = input.value;
-
-  // Method 1: Direct value assignment
   input.value = value;
 
-  // Method 2: Use native property descriptor (for React/Vue)
   try {
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       window.HTMLInputElement.prototype,
@@ -159,10 +130,9 @@ function setInputValueInstantly(input, value) {
     ).set;
     nativeInputValueSetter.call(input, value);
   } catch (e) {
-    console.warn("Native setter failed, using standard assignment");
+    // Fallback to direct assignment
   }
 
-  // Method 3: Trigger Vue/React reactivity with comprehensive events
   const events = [
     new Event("input", { bubbles: true, cancelable: true }),
     new Event("change", { bubbles: true, cancelable: true }),
@@ -176,87 +146,10 @@ function setInputValueInstantly(input, value) {
   ];
 
   events.forEach((event) => input.dispatchEvent(event));
-
-  // Verify the value was set
   return input.value === value;
 }
 
-function selectDropdownOptionInstantly(targetText, optionSelectors = []) {
-  const defaultSelectors = [
-    ".multiselect__option:not(.multiselect__option--disabled)",
-    ".dropdown-option",
-    "[role='option']",
-    ".option",
-  ];
-
-  const selectors =
-    optionSelectors.length > 0 ? optionSelectors : defaultSelectors;
-
-  for (const selector of selectors) {
-    const options = document.querySelectorAll(selector);
-
-    for (const option of options) {
-      const optionText = option.textContent.trim().toLowerCase();
-      const searchText = targetText.toLowerCase();
-
-      if (
-        optionText === searchText ||
-        optionText.includes(searchText) ||
-        searchText.includes(optionText)
-      ) {
-        console.log(
-          `✅ Instantly selecting option: "${option.textContent.trim()}"`
-        );
-
-        // Trigger click without delays
-        option.scrollIntoView({ block: "nearest" });
-        option.click();
-
-        // Dispatch additional events if needed
-        option.dispatchEvent(new Event("mousedown", { bubbles: true }));
-        option.dispatchEvent(new Event("mouseup", { bubbles: true }));
-
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-// === MAIN AUTO-FILL HANDLER ===
-async function handleAutoFill(config) {
-  console.log("🔍 Starting instant auto-fill with config:", config);
-
-  try {
-    await loadModsData();
-    await waitForPageReady();
-    await clearExistingSearch();
-    await setBaseItemTypeInstantly(config.jewelType);
-
-    if (config.searchMode === "with-mods" && config.selectedMods?.length > 0) {
-      console.log(
-        "🔧 Adding",
-        config.selectedMods.length,
-        "mod filters instantly..."
-      );
-      await addModFiltersInstantly(config.selectedMods);
-    }
-
-    console.log("✅ Form configured instantly. Ready for search.");
-    return {
-      success: true,
-      message: `Successfully configured search for ${
-        CONFIG.JEWEL_MAPPINGS[config.jewelType]
-      }`,
-    };
-  } catch (error) {
-    console.error("❌ Instant auto-fill failed:", error);
-    throw new Error(`Auto-fill failed: ${error.message}`);
-  }
-}
-
-// === INSTANT BASE ITEM SELECTION ===
+// Set base item type (jewel selection) with proper dropdown triggering
 async function setBaseItemTypeInstantly(jewelType) {
   const displayName = CONFIG.JEWEL_MAPPINGS[jewelType];
   if (!displayName) throw new Error(`Unknown jewel type: ${jewelType}`);
@@ -267,160 +160,302 @@ async function setBaseItemTypeInstantly(jewelType) {
   );
   if (!searchInput) throw new Error("Could not find base item search field");
 
-  console.log("⚡ Setting base item instantly:", displayName);
-
-  // Focus the input
+  // Clear and focus input
   searchInput.focus();
   searchInput.click();
+  searchInput.value = "";
 
-  // Set value instantly
+  searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  await wait(200);
+
+  // Set the jewel name
   const valueSet = setInputValueInstantly(searchInput, displayName);
-
   if (!valueSet) {
     throw new Error("Failed to set base item value");
   }
 
-  // Short wait for dropdown to appear
-  await wait(100);
+  // Trigger dropdown appearance with multiple events
+  searchInput.focus();
+  searchInput.click();
 
-  // Select from dropdown instantly
-  const optionSelected = selectDropdownOptionInstantly(displayName);
+  searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+  searchInput.dispatchEvent(
+    new Event("keydown", { key: "ArrowDown", bubbles: true })
+  );
 
-  if (!optionSelected) {
-    // Fallback: trigger Enter key
+  await wait(800);
+
+  // Select from dropdown
+  const baseItemSelected = selectFromBaseItemDropdown(displayName);
+
+  if (!baseItemSelected) {
     searchInput.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
+    await wait(200);
   }
 
-  // Brief verification wait
-  await wait(50);
-  console.log("✅ Base item type set instantly:", displayName);
+  await wait(100);
 }
 
-// === INSTANT MOD FILTER ADDITION ===
-async function addModFiltersInstantly(selectedMods) {
-  for (let i = 0; i < selectedMods.length; i++) {
-    const mod = selectedMods[i];
-    console.log(
-      `🔧 Adding mod ${i + 1}/${selectedMods.length} instantly:`,
-      mod.modName
-    );
+// Select base item from dropdown with enhanced matching logic
+function selectFromBaseItemDropdown(targetText) {
+  const normalizeText = (text) =>
+    text.toLowerCase().replace(/\s+/g, " ").trim();
+  const normalizedTarget = normalizeText(targetText);
 
-    try {
-      await addSingleModFilterInstantly(mod, i);
-      await wait(50); // Minimal wait between mods
-    } catch (error) {
-      console.error(`❌ Failed to add mod ${mod.modName}:`, error);
+  // Try multiple selectors to find the correct dropdown
+  const possibleSelectors = [
+    ".search-select .multiselect__content .multiselect__option:not(.multiselect__option--disabled)",
+    ".multiselect__content .multiselect__option:not(.multiselect__option--disabled)",
+    ".multiselect__option:not(.multiselect__option--disabled)",
+  ];
+
+  for (const selector of possibleSelectors) {
+    const baseItemOptions = document.querySelectorAll(selector);
+    if (baseItemOptions.length === 0) continue;
+
+    // Verify we're looking at jewel options, not other items
+    const jewelOptions = Array.from(baseItemOptions)
+      .filter((opt) => opt.textContent.toLowerCase().includes("jewel"))
+      .slice(0, 10);
+
+    // Try exact match first
+    for (const option of baseItemOptions) {
+      const optionText = option.textContent.trim();
+      const normalizedOption = normalizeText(optionText);
+
+      if (normalizedOption === normalizedTarget) {
+        option.scrollIntoView({ block: "nearest" });
+        option.click();
+        return true;
+      }
     }
-  }
-}
 
-async function addSingleModFilterInstantly(mod, filterIndex) {
-  console.log(
-    `🔥 Creating stat filter ${filterIndex + 1} instantly for: ${mod.modName}`
-  );
-
-  // Find the "Add Stat Filter" button
-  let addStatButton = null;
-  const statFiltersPanel = document.querySelector(
-    ".search-advanced-pane.brown"
-  );
-
-  if (statFiltersPanel) {
-    addStatButton = statFiltersPanel.querySelector(
-      '[class*="add-stat"], button[class*="stat"][class*="add"], .multiselect__input[placeholder*="Add Stat Filter"], input[placeholder*="Add Stat Filter"]'
-    );
-  }
-
-  if (!addStatButton) {
-    const allElements = document.querySelectorAll("*");
-    for (const element of allElements) {
-      if (
-        element.textContent &&
-        element.textContent.includes("Add Stat Filter")
-      ) {
-        if (element.tagName === "BUTTON" || element.tagName === "INPUT") {
-          addStatButton = element;
-          break;
-        } else {
-          const interactive = element.querySelector(
-            "button, input, .multiselect__input"
-          );
-          if (interactive) {
-            addStatButton = interactive;
-            break;
-          }
+    // Try partial matching if we found jewel options
+    if (jewelOptions.length > 0) {
+      for (const option of baseItemOptions) {
+        const optionText = option.textContent.trim();
+        if (
+          optionText
+            .toLowerCase()
+            .includes(targetText.toLowerCase().replace(" jewel", ""))
+        ) {
+          option.scrollIntoView({ block: "nearest" });
+          option.click();
+          return true;
         }
       }
     }
   }
 
-  if (!addStatButton) {
-    throw new Error('Could not find "Add Stat Filter" control');
-  }
-
-  // Use the exact mod text from the complete dataset
-  const tradeSiteStat = mapModToTradeStat(mod.modName, mod);
-  console.log(`🔥 Using trade site stat instantly: "${tradeSiteStat}"`);
-
-  if (addStatButton.tagName === "BUTTON") {
-    addStatButton.click();
-    await wait(50); // Minimal wait for UI update
-
-    const statInput = document.querySelector(
-      'input[placeholder*="Add Stat Filter"], .multiselect__input:last-of-type'
-    );
-    if (statInput) {
-      await setStatInputInstantly(statInput, tradeSiteStat);
-    } else {
-      throw new Error("No stat input appeared after clicking Add Stat Filter");
-    }
-  } else if (addStatButton.tagName === "INPUT") {
-    await setStatInputInstantly(addStatButton, tradeSiteStat);
-  }
-
-  await wait(100); // Brief wait for filter creation
-  const verifyFilter = await verifyStatFilterCreated(tradeSiteStat);
-  if (!verifyFilter) {
-    throw new Error("Failed to create stat filter");
-  }
-
-  await setModValuesInstantly(mod);
+  return false;
 }
 
-async function setStatInputInstantly(input, tradeSiteStat) {
+// Add a single mod filter with tier range selection
+async function addSingleModFilterInstantly(mod, filterIndex) {
+  try {
+    const statFilterInput = await findStatFilterInput();
+    if (!statFilterInput) {
+      throw new Error("Could not find stat filter input");
+    }
+
+    const tradeSiteStat = mapModToTradeStat(mod.modName, mod);
+    await setStatFilterInputInstantly(statFilterInput, tradeSiteStat);
+    await wait(500);
+
+    const statSelected = selectFromStatFilterDropdown(tradeSiteStat);
+    if (!statSelected) {
+      throw new Error("Failed to select stat from dropdown");
+    }
+
+    await wait(300);
+    const verified = await verifyStatFilterCreated(tradeSiteStat);
+    if (!verified) {
+      throw new Error("Failed to create stat filter");
+    }
+
+    await setModValuesInstantly(mod);
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Find the stat filter input field in the advanced search section
+async function findStatFilterInput() {
+  let statInput = document.querySelector(
+    '.search-advanced-pane.brown input[placeholder*="Add Stat Filter"]'
+  );
+
+  if (statInput) {
+    return statInput;
+  }
+
+  const statSection = document.querySelector(".search-advanced-pane.brown");
+  if (statSection) {
+    const mutateSelect = statSection.querySelector(
+      '.filter-select-mutate input[type="text"]'
+    );
+    if (mutateSelect) {
+      return mutateSelect;
+    }
+
+    const anyInput = statSection.querySelector(
+      'input[type="text"]:not([disabled])'
+    );
+    if (anyInput && anyInput.placeholder.includes("Add Stat Filter")) {
+      return anyInput;
+    }
+  }
+
+  return null;
+}
+
+// Set stat filter input with proper dropdown triggering
+async function setStatFilterInputInstantly(input, tradeSiteStat) {
+  input.value = "";
   input.focus();
   input.click();
 
-  // Clear and set value instantly
-  const valueSet = setInputValueInstantly(input, tradeSiteStat);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await wait(200);
 
-  if (!valueSet) {
-    throw new Error("Failed to set stat input value");
+  const success = setInputValueInstantly(input, tradeSiteStat);
+  if (!success) {
+    return;
   }
 
-  await wait(80); // Wait for dropdown
+  // Force dropdown to appear and filter results
+  input.focus();
+  input.click();
 
-  const optionSelected = selectDropdownOptionInstantly(tradeSiteStat, [
-    ".search-advanced-pane.brown .multiselect__option:not(.multiselect__option--disabled)",
-    '[class*="stat"] .multiselect__option:not(.multiselect__option--disabled)',
-    ".multiselect__option:not(.multiselect__option--disabled)",
-  ]);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("keyup", { bubbles: true }));
+  input.dispatchEvent(
+    new Event("keydown", { key: "ArrowDown", bubbles: true })
+  );
 
-  if (!optionSelected) {
-    input.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Enter",
-        bubbles: true,
-        code: "Enter",
-      })
-    );
+  await wait(800);
+}
+
+// Select stat from filtered dropdown with advanced text matching
+function selectFromStatFilterDropdown(targetText) {
+  const statFilterOptions = document.querySelectorAll(
+    CONFIG.SELECTORS.STAT_FILTER_OPTIONS
+  );
+  if (statFilterOptions.length === 0) return false;
+
+  // Create multiple search variations to handle different text formats
+  const searchVariations = [
+    targetText,
+    targetText.replace(/explicit /i, ""),
+    targetText.replace(/pseudo /i, ""),
+    targetText.replace(/#/g, "X"),
+    targetText.replace(/#/g, "(X-Y)"),
+    targetText.replace(
+      "Minions deal # to # additional Chaos Damage",
+      "Minions deal (X-Y) additional Chaos Damage"
+    ),
+    targetText.replace(
+      "Minions have #% chance to Poison Enemies on Hit",
+      "Minions have X% chance to Poison Enemies on Hit"
+    ),
+    targetText.replace(" additional", ""),
+    targetText.replace(" Enemies", ""),
+  ];
+
+  const normalizeText = (text) =>
+    text.toLowerCase().replace(/\s+/g, " ").trim();
+
+  // Try exact matches with all variations
+  for (const variation of searchVariations) {
+    const normalizedVariation = normalizeText(variation);
+
+    for (const option of statFilterOptions) {
+      const optionText = option.textContent.trim();
+      const normalizedOption = normalizeText(optionText);
+
+      if (normalizedOption === normalizedVariation) {
+        option.scrollIntoView({ block: "nearest" });
+        option.click();
+        return true;
+      }
+    }
+  }
+
+  // Fallback to keyword matching
+  const keywords = [];
+  if (targetText.toLowerCase().includes("chaos")) keywords.push("chaos");
+  if (targetText.toLowerCase().includes("poison")) keywords.push("poison");
+  if (targetText.toLowerCase().includes("minion")) keywords.push("minion");
+  if (targetText.toLowerCase().includes("deal")) keywords.push("deal");
+  if (targetText.toLowerCase().includes("damage")) keywords.push("damage");
+
+  for (const option of statFilterOptions) {
+    const optionText = option.textContent.toLowerCase();
+
+    const matchCount = keywords.filter((keyword) =>
+      optionText.includes(keyword)
+    ).length;
+
+    if (matchCount >= Math.min(3, keywords.length)) {
+      option.scrollIntoView({ block: "nearest" });
+      option.click();
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Main auto-fill handler coordinating all operations
+async function handleAutoFill(config) {
+  await wait(500);
+
+  const isStable = await waitForTradePageStability();
+  if (!isStable) {
+    console.warn("Page may not be fully stable, proceeding anyway...");
+  }
+
+  try {
+    await loadModsData();
+    await waitForPageReady();
+    await clearExistingSearch();
+    await setBaseItemTypeInstantly(config.jewelType);
+
+    if (config.searchMode === "with-mods" && config.selectedMods?.length > 0) {
+      await addModFiltersInstantly(config.selectedMods);
+    }
+
+    return {
+      success: true,
+      message: `Successfully configured search for ${
+        CONFIG.JEWEL_MAPPINGS[config.jewelType]
+      }`,
+    };
+  } catch (error) {
+    console.error("Auto-fill failed:", error);
+    throw new Error(`Auto-fill failed: ${error.message}`);
   }
 }
 
+// Add multiple mod filters sequentially
+async function addModFiltersInstantly(selectedMods) {
+  for (let i = 0; i < selectedMods.length; i++) {
+    const mod = selectedMods[i];
+
+    try {
+      await addSingleModFilterInstantly(mod, i);
+      await wait(200);
+    } catch (error) {
+      console.error(`Failed to add mod ${mod.modName}:`, error);
+    }
+  }
+}
+
+// Verify that stat filter was successfully created
 async function verifyStatFilterCreated(expectedStat) {
-  await wait(100);
+  await wait(300);
 
   const statFiltersSection = document.querySelector(
     ".search-advanced-pane.brown"
@@ -440,19 +475,16 @@ async function verifyStatFilterCreated(expectedStat) {
     return false;
   }
 
-  return (
-    latestFilter.querySelector('input[placeholder="min"]') &&
-    latestFilter.querySelector('input[placeholder="max"]')
-  );
+  const minInput = latestFilter.querySelector('input[placeholder="min"]');
+  const maxInput = latestFilter.querySelector('input[placeholder="max"]');
+
+  return minInput && maxInput;
 }
 
+// Set min/max values for the most recently created mod filter
 async function setModValuesInstantly(mod) {
-  console.log("📊 Setting values instantly for latest filter:", mod.modName);
-
   let minValue = mod.minValue;
   let maxValue = mod.maxValue;
-
-  console.log(`✅ Using values: min=${minValue}, max=${maxValue}`);
 
   const statFilterContainers = document.querySelectorAll(
     ".search-advanced-pane.brown .filter.full-span, .filter-group .filter.full-span"
@@ -471,21 +503,15 @@ async function setModValuesInstantly(mod) {
   );
 
   if (minInput && minValue !== undefined) {
-    const success = setInputValueInstantly(minInput, minValue.toString());
-    if (success) {
-      console.log("✅ Min value set instantly:", minValue);
-    }
+    setInputValueInstantly(minInput, minValue.toString());
   }
 
   if (maxInput && maxValue !== undefined) {
-    const success = setInputValueInstantly(maxInput, maxValue.toString());
-    if (success) {
-      console.log("✅ Max value set instantly:", maxValue);
-    }
+    setInputValueInstantly(maxInput, maxValue.toString());
   }
 }
 
-// === HELPER FUNCTIONS ===
+// Find elements with fallback selectors and timeout
 async function findElementWithFallback(selectors, timeout = 5000) {
   const selectorArray = Array.isArray(selectors) ? selectors : [selectors];
 
@@ -514,39 +540,57 @@ async function findElementWithFallback(selectors, timeout = 5000) {
   });
 }
 
+// Wait for page to be ready for interaction
 async function waitForPageReady() {
-  console.log("⏳ [waitForPageReady] Starting...");
-
   try {
     await waitForElement(["body", ".content"], 10000);
-    console.log("✅ [waitForPageReady] Body/content found");
 
     if (!window.location.href.includes("pathofexile.com/trade")) {
       throw new Error("Not on Path of Exile trade site");
     }
 
-    // Minimal wait for instant operation
-    await wait(300);
-
-    const searchInput = document.querySelector(
-      '.search-select input[type="text"], input[placeholder*="Search Items"], .multiselect__input'
-    );
-
-    if (searchInput) {
-      console.log("✅ [waitForPageReady] Search input found");
-    } else {
-      console.log(
-        "⚠️ [waitForPageReady] Search input not found, but continuing..."
-      );
-    }
-
-    console.log("✅ [waitForPageReady] Page ready check complete");
+    await wait(500);
+    await waitForTradePageStability();
   } catch (error) {
-    console.error("❌ [waitForPageReady] Error:", error);
+    console.error("waitForPageReady error:", error);
     throw error;
   }
 }
 
+// Wait for trade page elements to stabilize
+async function waitForTradePageStability() {
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const checkStability = () => {
+      attempts++;
+
+      const hasStatSection = document.querySelector(
+        ".search-advanced-pane.brown"
+      );
+      const hasBaseSearch = document.querySelector(
+        '.search-select input[placeholder="Search Items..."]'
+      );
+      const noLoadingSpinners = !document.querySelector(
+        '.loading, [class*="loading"]'
+      );
+
+      if (
+        (hasStatSection && hasBaseSearch && noLoadingSpinners) ||
+        attempts >= maxAttempts
+      ) {
+        resolve();
+      } else {
+        setTimeout(checkStability, 250);
+      }
+    };
+
+    checkStability();
+  });
+}
+
+// Clear any existing search filters
 async function clearExistingSearch() {
   const clearButton = await findElementWithFallback(
     ['button[title*="Clear"]', ".clear-all-button"],
@@ -554,17 +598,18 @@ async function clearExistingSearch() {
   );
   if (clearButton) {
     clearButton.click();
-    await wait(100); // Minimal wait
+    await wait(100);
   }
 }
 
+// Wait for specific element to appear
 async function waitForElement(selectors, timeout = 5000) {
   const element = await findElementWithFallback(selectors, timeout);
   if (!element) throw new Error(`Element not found: ${selectors.join(", ")}`);
   return element;
 }
 
-// === INITIALIZATION ===
+// Initialize content script and message listener
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeContentScript);
 } else {
@@ -572,11 +617,7 @@ if (document.readyState === "loading") {
 }
 
 function initializeContentScript() {
-  console.log("✅ Content script initialized for instant auto-fill");
-
-  loadModsData().then(() => {
-    console.log("✅ Content script ready for instant operation");
-  });
+  loadModsData();
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "ping") {
@@ -596,12 +637,3 @@ function initializeContentScript() {
     sendResponse({ success: false, error: "Unknown action" });
   });
 }
-
-// Export for debugging
-window.loadModsData = loadModsData;
-window.findModMapping = findModMapping;
-window.modMappings = modMappings;
-
-console.log(
-  "✅ PoE Easy Search content script loaded - Instant Auto-fill v10.0"
-);

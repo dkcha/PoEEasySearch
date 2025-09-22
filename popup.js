@@ -1,14 +1,12 @@
-// PoE Trade Helper - Production Popup Script (Data-Driven Architecture v9.3)
-console.log("PoE Trade Helper - Popup script loading...");
-
-// === GLOBAL STATE ===
+// PoE Trade Helper - Popup Script
+// Global state management
 let currentJewelType = "";
 let selectedMods = [];
 let allAbyssModsData = null;
 let currentModForTierSelection = null;
 let elements = {};
 
-// === CONFIGURATION ===
+// Configuration for different jewel types and their mod domains
 const JEWEL_TYPE_CONFIG = {
   murderous: {
     displayName: "Murderous Eye Jewel",
@@ -32,17 +30,13 @@ const JEWEL_TYPE_CONFIG = {
   },
 };
 
-// === INITIALIZATION ===
+// Initialize popup when DOM is ready
 document.addEventListener("DOMContentLoaded", async function () {
-  console.log("DOM loaded, initializing popup...");
-
   try {
     await loadDataFiles();
     initializeElements();
     attachEventListeners();
     populateJewelDropdown();
-
-    console.log("Popup initialization complete");
     showStatusMessage("Extension loaded successfully", "success");
   } catch (error) {
     console.error("Failed to initialize popup:", error);
@@ -50,7 +44,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 });
 
-// === DATA LOADING ===
+// Load mod data from GitHub repository
 async function loadDataFiles() {
   const GITHUB_BASE_URL =
     "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/";
@@ -59,13 +53,11 @@ async function loadDataFiles() {
 
   try {
     const response = await fetch(fullURL);
-
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
     }
 
     const responseText = await response.text();
-
     if (
       !responseText.trim().startsWith("{") &&
       !responseText.trim().startsWith("[")
@@ -74,16 +66,13 @@ async function loadDataFiles() {
     }
 
     allAbyssModsData = JSON.parse(responseText);
-
-    const finalCount = Object.keys(allAbyssModsData).length;
-    console.log(`Loaded ${finalCount} abyss jewel mods from dataset`);
   } catch (error) {
     console.error("Data loading error:", error);
     throw error;
   }
 }
 
-// === MOD PROCESSING - TIER AGGREGATION ===
+// Process and group mods by jewel type with tier aggregation
 function getModsForJewelType(jewelType) {
   if (!jewelType || !allAbyssModsData) return {};
 
@@ -92,11 +81,10 @@ function getModsForJewelType(jewelType) {
 
   const modGroups = {};
 
-  // First pass: Group mods by their base type
+  // Group mods by their base type
   Object.entries(allAbyssModsData).forEach(([modId, modData]) => {
     if (!modData.spawn_weights) return;
 
-    // Check if this mod can spawn on the selected jewel type
     const canSpawnOnJewel = modData.spawn_weights.some((spawnWeight) => {
       if (!spawnWeight.weight || spawnWeight.weight <= 0) {
         return false;
@@ -124,13 +112,13 @@ function getModsForJewelType(jewelType) {
     }
   });
 
-  // Second pass: Create tier-aggregated mods
+  // Create tier-aggregated mods from grouped variants
   const relevantMods = {};
 
   Object.entries(modGroups).forEach(([baseModType, modVariants]) => {
     if (modVariants.length === 0) return;
 
-    // Sort by required level (highest first = T1), then by modId for consistency
+    // Sort by required level (highest first = T1)
     const sortedVariants = modVariants.sort((a, b) => {
       const levelDiff = (b.requiredLevel || 0) - (a.requiredLevel || 0);
       if (levelDiff !== 0) return levelDiff;
@@ -153,7 +141,7 @@ function getModsForJewelType(jewelType) {
     // Choose the most representative variant for display
     let primaryVariant = sortedVariants[0];
 
-    // For life regeneration, prefer player regeneration over enemy debuffs
+    // Special handling for life regeneration mods
     if (baseModType === "PlayerLifeRegeneration") {
       const playerRegenVariant = sortedVariants.find(
         (variant) =>
@@ -187,6 +175,7 @@ function getModsForJewelType(jewelType) {
   return relevantMods;
 }
 
+// Extract base mod type from mod text using pattern matching
 function extractBaseModType(modId, modText) {
   if (!modText) {
     return modId || "UnknownMod";
@@ -194,22 +183,60 @@ function extractBaseModType(modId, modText) {
 
   const textLower = modText.toLowerCase();
 
-  // Life/Mana/ES patterns
+  // Minion patterns (must come first to avoid collisions)
+  if (textLower.includes("minion")) {
+    if (textLower.includes("maximum life")) return "MinionMaximumLife";
+    if (
+      textLower.includes("life per second") ||
+      textLower.includes("life regeneration")
+    ) {
+      return "MinionLifeRegeneration";
+    }
+    if (textLower.includes("leech") && textLower.includes("life"))
+      return "MinionLifeLeech";
+
+    if (
+      textLower.includes("attack speed") &&
+      textLower.includes("cast speed")
+    ) {
+      return "MinionAttackAndCastSpeed";
+    }
+    if (textLower.includes("attack speed")) return "MinionAttackSpeed";
+    if (textLower.includes("cast speed")) return "MinionCastSpeed";
+    if (textLower.includes("movement speed")) return "MinionMovementSpeed";
+
+    if (textLower.includes("damage")) {
+      if (textLower.includes("fire damage")) return "MinionFireDamage";
+      if (textLower.includes("cold damage")) return "MinionColdDamage";
+      if (textLower.includes("lightning damage"))
+        return "MinionLightningDamage";
+      if (textLower.includes("physical damage")) return "MinionPhysicalDamage";
+      if (textLower.includes("chaos damage")) return "MinionChaosDamage";
+      return "MinionDamage";
+    }
+
+    if (textLower.includes("accuracy")) return "MinionAccuracy";
+    if (textLower.includes("resistance")) return "MinionResistances";
+    if (textLower.includes("blind")) return "MinionBlindOnHit";
+    if (textLower.includes("taunt")) return "MinionTauntOnHit";
+    if (textLower.includes("hinder")) return "MinionHinderOnHit";
+    if (textLower.includes("poison")) return "MinionPoisonOnHit";
+    if (textLower.includes("ignite")) return "MinionIgniteOnHit";
+    if (textLower.includes("bleed")) return "MinionBleedOnHit";
+
+    return "MinionMod";
+  }
+
+  // Player stat patterns
   if (textLower.includes("maximum life")) return "MaximumLife";
   if (textLower.includes("maximum mana")) return "MaximumMana";
   if (textLower.includes("maximum energy shield")) return "MaximumEnergyShield";
 
-  // Life regeneration patterns (fixed base type collision)
+  // Life regeneration patterns with conditional handling
   if (
     textLower.includes("life per second") ||
     textLower.includes("life regeneration")
   ) {
-    if (
-      textLower.includes("minion") ||
-      modId.toLowerCase().includes("minion")
-    ) {
-      return "MinionLifeRegeneration";
-    }
     if (
       textLower.includes("while moving") ||
       textLower.includes("moving") ||
@@ -232,17 +259,10 @@ function extractBaseModType(modId, modText) {
     return "PlayerLifeRegeneration";
   }
 
-  // Mana regeneration patterns
   if (
     textLower.includes("mana per second") ||
     textLower.includes("mana regeneration")
   ) {
-    if (
-      textLower.includes("minion") ||
-      modId.toLowerCase().includes("minion")
-    ) {
-      return "MinionManaRegeneration";
-    }
     return "PlayerManaRegeneration";
   }
 
@@ -272,12 +292,36 @@ function extractBaseModType(modId, modText) {
     }
   }
 
-  // Speed patterns
+  // Speed and cast patterns
+  if (textLower.includes("cast speed")) {
+    if (textLower.includes("recently") || textLower.includes("if")) {
+      return "ConditionalCastSpeed";
+    }
+    return "CastSpeed";
+  }
+
   if (textLower.includes("attack speed")) return "AttackSpeed";
-  if (textLower.includes("cast speed")) return "CastSpeed";
   if (textLower.includes("movement speed")) return "MovementSpeed";
 
-  // Fallback
+  if (textLower.includes("spell") && textLower.includes("damage")) {
+    return "SpellDamage";
+  }
+
+  // Critical strike patterns
+  if (textLower.includes("critical strike chance"))
+    return "CriticalStrikeChance";
+  if (textLower.includes("critical strike multiplier"))
+    return "CriticalStrikeMultiplier";
+
+  // Ailment effect patterns
+  if (textLower.includes("effect of") && textLower.includes("ailments")) {
+    if (textLower.includes("cold")) return "ColdAilmentEffect";
+    if (textLower.includes("fire")) return "FireAilmentEffect";
+    if (textLower.includes("lightning")) return "LightningAilmentEffect";
+    return "AilmentEffect";
+  }
+
+  // Fallback pattern extraction
   const fallbackType = modText
     .replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "")
     .replace(/\b\d+(?:\.\d+)?\b/g, "")
@@ -289,7 +333,7 @@ function extractBaseModType(modId, modText) {
   return fallbackType || modId || "UnknownMod";
 }
 
-// === HELPER FUNCTIONS ===
+// Create user-friendly mod names by normalizing value placeholders
 function createFriendlyModName(text, modData) {
   if (!text) return "Unknown Mod";
 
@@ -300,17 +344,13 @@ function createFriendlyModName(text, modData) {
     /\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\) to \(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g,
     "# to #"
   );
-
   // Handle single ranges like "(17-20)" -> "#"
   friendly = friendly.replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "#");
-
   // Handle standalone numbers
   friendly = friendly.replace(/\b\d+(?:\.\d+)?\b/g, "#");
-
   // Clean up multiple # symbols that are adjacent
   friendly = friendly.replace(/#\s*to\s*#\s*to\s*#/g, "# to #");
   friendly = friendly.replace(/#+/g, "#");
-
   // Normalize + signs and spacing
   friendly = friendly.replace(/\+#/g, "+#");
   friendly = friendly.replace(/\s+/g, " ");
@@ -318,11 +358,11 @@ function createFriendlyModName(text, modData) {
   return friendly.trim();
 }
 
+// Create tier information from mod data
 function createTierInfo(modData) {
   let min = undefined,
     max = undefined;
 
-  // Extract values from mod text
   if (modData.text) {
     const values = extractValuesFromText(modData.text);
     min = values.min;
@@ -344,6 +384,7 @@ function createTierInfo(modData) {
   };
 }
 
+// Extract numeric values from mod text using regex patterns
 function extractValuesFromText(text) {
   if (!text || typeof text !== "string") {
     return { min: undefined, max: undefined };
@@ -379,7 +420,7 @@ function extractValuesFromText(text) {
   return { min: undefined, max: undefined };
 }
 
-// === MOD SEARCH ===
+// Search for mods matching query with fuzzy matching and abbreviation support
 function findMatchingMods(query, maxResults = 10) {
   if (!currentJewelType || !allAbyssModsData) return [];
 
@@ -387,7 +428,7 @@ function findMatchingMods(query, maxResults = 10) {
   const queryLower = query.toLowerCase().trim();
   const results = [];
 
-  // Enhanced abbreviations map
+  // Common abbreviations mapping
   const abbreviations = {
     mana: "maximum mana",
     es: "energy shield",
@@ -406,7 +447,7 @@ function findMatchingMods(query, maxResults = 10) {
 
   const searchQuery = (abbreviations[queryLower] || queryLower).toLowerCase();
 
-  // Search through all available mods
+  // Search through all available mods with confidence scoring
   Object.entries(availableMods).forEach(([modId, mod]) => {
     const modTextLower = (mod.text || "").toLowerCase();
     const modNameLower = (mod.name || "").toLowerCase();
@@ -479,7 +520,7 @@ function findMatchingMods(query, maxResults = 10) {
     .slice(0, maxResults);
 }
 
-// Helper functions for search matching
+// Helper functions for advanced text matching
 function hasWordBoundaryMatch(text, query) {
   const words = text.split(/\s+/);
   return words.some((word) => word.includes(query));
@@ -504,7 +545,7 @@ function hasTokenMatch(text, query) {
   );
 }
 
-// === DOM AND EVENT HANDLING ===
+// Initialize DOM element references
 function initializeElements() {
   const elementIds = [
     "jewelType",
@@ -528,6 +569,7 @@ function initializeElements() {
   });
 }
 
+// Attach event listeners to UI elements
 function attachEventListeners() {
   if (elements.jewelType)
     elements.jewelType.addEventListener("change", handleJewelTypeChange);
@@ -544,7 +586,6 @@ function attachEventListeners() {
       "click",
       confirmTierSelection
     );
-
   if (elements.tierFromSelect)
     elements.tierFromSelect.addEventListener("change", updateTierRangeInfo);
   if (elements.tierToSelect)
@@ -557,6 +598,7 @@ function attachEventListeners() {
   }
 }
 
+// Populate jewel type dropdown with available options
 function populateJewelDropdown() {
   if (!elements.jewelType) return;
 
@@ -570,6 +612,7 @@ function populateJewelDropdown() {
   });
 }
 
+// Handle jewel type selection change
 function handleJewelTypeChange(event) {
   currentJewelType = event.target.value;
   selectedMods = [];
@@ -593,6 +636,7 @@ function handleJewelTypeChange(event) {
   }
 }
 
+// Handle mod search input with real-time filtering
 function handleModSearchInput(event) {
   const query = event.target.value.trim();
   if (query.length < 2) {
@@ -610,6 +654,7 @@ function handleModSearchInput(event) {
   displaySearchResults(matchingMods);
 }
 
+// Handle keyboard navigation in search
 function handleModSearchKeydown(event) {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -618,6 +663,7 @@ function handleModSearchKeydown(event) {
   }
 }
 
+// Display search results in the UI
 function displaySearchResults(results) {
   if (!elements.searchResults) return;
 
@@ -645,11 +691,13 @@ function displaySearchResults(results) {
   });
 }
 
+// Handle mod selection and show tier modal
 function selectMod(mod) {
   currentModForTierSelection = mod;
   showTierModal(mod);
 }
 
+// Show tier selection modal for the selected mod
 function showTierModal(mod) {
   if (!elements.tierModal || !elements.tierFromSelect || !elements.tierToSelect)
     return;
@@ -685,6 +733,7 @@ function showTierModal(mod) {
   elements.tierModal.style.display = "flex";
 }
 
+// Update tier range information display based on current selections
 function updateTierRangeInfo() {
   if (
     !elements.tierRangeInfo ||
@@ -702,12 +751,10 @@ function updateTierRangeInfo() {
   const toTierData = currentModForTierSelection.tiers[toTier];
   const modText = fromTierData.text || currentModForTierSelection.name;
 
-  // Check if we're dealing with the lowest available tier
   const tierKeys = Object.keys(currentModForTierSelection.tiers);
   const lowestTier = tierKeys[tierKeys.length - 1];
   const isLowestTierSearch = fromTier === lowestTier || toTier === lowestTier;
 
-  // Determine value ranges for display
   const fromTierNum = parseInt(fromTier.replace("T", ""));
   const toTierNum = parseInt(toTier.replace("T", ""));
 
@@ -722,13 +769,10 @@ function updateTierRangeInfo() {
     minDisplayValue = fromTierData.min;
     maxDisplayValue = fromTierData.max;
   } else {
-    // For ranges, show the full span from lowest to highest values
     if (fromTierNum > toTierNum) {
-      // T4-T3: min from T4, max from T3
       minDisplayValue = fromTierData.min;
       maxDisplayValue = toTierData.max;
     } else {
-      // T3-T4: min from T4, max from T3
       minDisplayValue = toTierData.min;
       maxDisplayValue = fromTierData.max;
     }
@@ -760,6 +804,7 @@ function updateTierRangeInfo() {
   elements.tierRangeInfo.innerHTML = infoText;
 }
 
+// Confirm tier selection and add mod to selected list
 function confirmTierSelection() {
   if (!currentModForTierSelection) return;
 
@@ -770,7 +815,7 @@ function confirmTierSelection() {
   closeTierModal();
 }
 
-// === UTILITY FUNCTIONS FOR TIER HANDLING ===
+// Check if mod is a flat added damage type (requires special averaging)
 function isFlatAddedDamageMod(modText) {
   if (!modText) return false;
   const textLower = modText.toLowerCase();
@@ -778,7 +823,6 @@ function isFlatAddedDamageMod(modText) {
   const hasDamagePattern =
     (textLower.includes("adds") && textLower.includes("damage")) ||
     (textLower.includes("added") && textLower.includes("damage"));
-
   const hasDamageType =
     textLower.includes("physical") ||
     textLower.includes("fire") ||
@@ -786,7 +830,6 @@ function isFlatAddedDamageMod(modText) {
     textLower.includes("lightning") ||
     textLower.includes("chaos") ||
     textLower.includes("elemental");
-
   const isPercentage =
     textLower.includes("%") ||
     textLower.includes("increased") ||
@@ -797,35 +840,10 @@ function isFlatAddedDamageMod(modText) {
   return hasDamagePattern && hasDamageType && !isPercentage;
 }
 
-function calculateCappedMaxValue(mod, toTier, toTierData) {
-  const tierKeys = Object.keys(mod.tiers);
-  const toTierIndex = tierKeys.indexOf(toTier);
-
-  if (toTierIndex <= 0) return toTierData.max;
-
-  const nextTierKey = tierKeys[toTierIndex - 1];
-  const nextTierData = mod.tiers[nextTierKey];
-
-  if (!nextTierData || nextTierData.min > toTierData.max) return toTierData.max;
-
-  const proposedCap = nextTierData.min - 1;
-  if (proposedCap >= toTierData.min && proposedCap < toTierData.max) {
-    return proposedCap;
-  }
-
-  return toTierData.max;
-}
-
-function getPrevTier(tier) {
-  const tierNum = parseInt(tier.replace("T", ""));
-  return tierNum > 1 ? `T${tierNum - 1}` : "higher tier";
-}
-
-// === MOD SELECTION - MULTIPLE MODS SUPPORT ===
+// Add selected mod with tier range to the mod list
 function addSelectedModWithRange(mod, fromTier, toTier) {
   const baseModType =
     mod.baseModType || mod.modId || extractBaseModType(mod.modId, mod.text);
-
   const existingIndex = selectedMods.findIndex(
     (selected) => selected.baseModType === baseModType
   );
@@ -859,16 +877,15 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
 
   let finalMinValue,
     finalMaxValue,
-    wasAveraged = false,
-    wasCapped = false;
+    wasAveraged = false;
 
+  // Calculate search values based on tier selection
   if (isLowestTierSearch) {
     finalMinValue = 0;
     finalMaxValue = Math.max(fromTierData.max, toTierData.max);
     wasAveraged = false;
   } else if (isExactTier) {
     if (isFlatAddedDamageMod(modTextForCheck)) {
-      // For exact tier damage mods, use the averaged damage range
       const damageRange = calculateDamageRange(fromTierData);
       finalMinValue = damageRange.min;
       finalMaxValue = damageRange.max;
@@ -879,14 +896,12 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
       wasAveraged = false;
     }
   } else {
-    // Range search
     if (isFlatAddedDamageMod(modTextForCheck)) {
-      // FIXED: For damage mod ranges, use averaged values from each tier
       const lowerDamageRange = calculateDamageRange(lowerValueTierData);
       const higherDamageRange = calculateDamageRange(higherValueTierData);
 
-      finalMinValue = lowerDamageRange.min; // T4 averaged min (9)
-      finalMaxValue = higherDamageRange.max; // T3 averaged max (12)
+      finalMinValue = lowerDamageRange.min;
+      finalMaxValue = higherDamageRange.max;
       wasAveraged = true;
     } else {
       finalMinValue = lowerValueTierData.min;
@@ -894,47 +909,6 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
       wasAveraged = false;
     }
   }
-
-  console.log("=== MOD VALUE DEBUG ===");
-  console.log("Mod name:", mod.name);
-  console.log("Selection: fromTier =", fromTier, "toTier =", toTier);
-  console.log(
-    "lowerValueTier:",
-    lowerValueTier,
-    "- text:",
-    lowerValueTierData.text
-  );
-  console.log(
-    "higherValueTier:",
-    higherValueTier,
-    "- text:",
-    higherValueTierData.text
-  );
-
-  if (isFlatAddedDamageMod(modTextForCheck)) {
-    const lowerDamageRange = calculateDamageRange(lowerValueTierData);
-    const higherDamageRange = calculateDamageRange(higherValueTierData);
-    console.log(
-      "Lower tier averaged damage:",
-      lowerDamageRange.min,
-      "-",
-      lowerDamageRange.max
-    );
-    console.log(
-      "Higher tier averaged damage:",
-      higherDamageRange.min,
-      "-",
-      higherDamageRange.max
-    );
-  }
-
-  console.log(
-    "FINAL: finalMinValue =",
-    finalMinValue,
-    ", finalMaxValue =",
-    finalMaxValue
-  );
-  console.log("=== END DEBUG ===");
 
   const modData = {
     modId: mod.modId,
@@ -948,7 +922,6 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
     minValue: finalMinValue,
     maxValue: finalMaxValue,
     wasAveraged: wasAveraged,
-    wasCapped: wasCapped,
     isExactTier: isExactTier,
     isLowestTierSearch: isLowestTierSearch,
     originalText: fromTierData.text || mod.text,
@@ -978,88 +951,36 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
   );
 }
 
+// Calculate damage range for flat damage mods using averaging
 function calculateDamageRange(tierData) {
-  // For damage mods like "(6-7) to (11-13)", calculate the actual damage range
-  // The game averages the two numbers: (6+11)/2 to (7+13)/2 = 8.5 to 10
   const text = tierData.text;
-
-  // Extract the two damage ranges
   const damageRangeMatch = text.match(
     /\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\) to \((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)/
   );
 
   if (damageRangeMatch) {
-    const lowMin = parseFloat(damageRangeMatch[1]); // 6
-    const lowMax = parseFloat(damageRangeMatch[2]); // 7
-    const highMin = parseFloat(damageRangeMatch[3]); // 11
-    const highMax = parseFloat(damageRangeMatch[4]); // 13
+    const lowMin = parseFloat(damageRangeMatch[1]);
+    const lowMax = parseFloat(damageRangeMatch[2]);
+    const highMin = parseFloat(damageRangeMatch[3]);
+    const highMax = parseFloat(damageRangeMatch[4]);
 
-    // Calculate the actual damage range by averaging (keep as floats for precision)
-    const actualMin = (lowMin + highMin) / 2; // (6+11)/2 = 8.5
-    const actualMax = (lowMax + highMax) / 2; // (7+13)/2 = 10
+    // Calculate the actual damage range by averaging
+    const actualMin = (lowMin + highMin) / 2;
+    const actualMax = (lowMax + highMax) / 2;
 
     return { min: actualMin, max: actualMax };
   }
 
-  // Fallback to tier data min/max if parsing fails
   return { min: tierData.min, max: tierData.max };
 }
 
-function calculateSearchValues(
-  tierData,
-  modText,
-  isExactTier,
-  fromTier,
-  toTier,
-  isLowestTierSearch = false
-) {
-  // For lowest tier searches, don't set a minimum value
-  if (isLowestTierSearch) {
-    if (isExactTier) {
-      // Exact lowest tier: min = 0, max = tier max
-      return {
-        min: 0,
-        max: tierData.max,
-        wasAveraged: false,
-      };
-    } else {
-      // Range including lowest tier: min = 0, max = tier max (no averaging for ranges including lowest)
-      return {
-        min: 0,
-        max: tierData.max,
-        wasAveraged: false,
-      };
-    }
-  }
-
-  // For non-lowest tier searches, use original logic
-  if (isExactTier) {
-    if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
-      const avgDamage = Math.round((tierData.min + tierData.max) / 2);
-      return { min: avgDamage, max: avgDamage, wasAveraged: true };
-    }
-    return { min: tierData.min, max: tierData.max, wasAveraged: false };
-  }
-
-  // Range searches for non-lowest tiers
-  if (isFlatAddedDamageMod(modText) && tierData.min && tierData.max) {
-    const avgDamage = Math.round((tierData.min + tierData.max) / 2);
-    return {
-      min: avgDamage,
-      max: tierData.max, // Use fromTier max, toTier max will be applied later
-      wasAveraged: true,
-      avgDamage: avgDamage,
-    };
-  }
-
-  return { min: tierData.min, max: tierData.max, wasAveraged: false };
-}
-
+// Close tier selection modal
 function closeTierModal() {
   if (elements.tierModal) elements.tierModal.style.display = "none";
   currentModForTierSelection = null;
 }
 
+// Update the display of selected mods
 function updateSelectedModsDisplay() {
   if (!elements.selectedMods) return;
 
@@ -1091,6 +1012,7 @@ function updateSelectedModsDisplay() {
   });
 }
 
+// Remove a selected mod from the list
 function removeSelectedMod(index) {
   if (index >= 0 && index < selectedMods.length) {
     const removedMod = selectedMods.splice(index, 1)[0];
@@ -1100,6 +1022,7 @@ function removeSelectedMod(index) {
   }
 }
 
+// Clear search input and results
 function clearSearchInput() {
   if (elements.modSearch) elements.modSearch.value = "";
   clearSearchResults();
@@ -1109,6 +1032,7 @@ function clearSearchResults() {
   if (elements.searchResults) elements.searchResults.innerHTML = "";
 }
 
+// Update auto-fill button text based on current state
 function updateAutoFillButton() {
   if (!elements.autoFillBtn) return;
 
@@ -1128,7 +1052,7 @@ function updateAutoFillButton() {
   }
 }
 
-// === AUTO-FILL ===
+// Handle auto-fill button click and send config to background script
 async function handleAutoFill() {
   if (!currentJewelType) {
     showStatusMessage("Please select a jewel type", "error");
@@ -1137,7 +1061,6 @@ async function handleAutoFill() {
 
   const searchMode = selectedMods.length > 0 ? "with-mods" : "base-only";
 
-  // Create processed mods with genericized text for trade site
   const processedMods = selectedMods.map((mod) => {
     const genericText = genericizeModText(mod.tierData.text || mod.name);
 
@@ -1175,17 +1098,19 @@ async function handleAutoFill() {
   }
 }
 
+// Convert mod text to generic format for trade site matching
 function genericizeModText(text) {
   if (!text) return "";
 
   return text
-    .replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "#") // Replace (12-15) with #
-    .replace(/\b\d+(?:\.\d+)?\b/g, "#") // Replace standalone numbers
-    .replace(/\+#/g, "+#") // Normalize + signs
-    .replace(/\s+/g, " ") // Normalize whitespace
+    .replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "#")
+    .replace(/\b\d+(?:\.\d+)?\b/g, "#")
+    .replace(/\+#/g, "+#")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
+// Show status message to user
 function showStatusMessage(message, type = "info") {
   if (!elements.statusMessage) return;
 
@@ -1201,7 +1126,3 @@ function showStatusMessage(message, type = "info") {
     }, 3000);
   }
 }
-
-console.log(
-  "PoE Trade Helper popup script loaded completely - Production v9.3"
-);

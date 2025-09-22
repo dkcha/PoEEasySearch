@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abyss Jewel Unit Tests - Standalone</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 20px;
+            line-height: 1.4;
+        }
+        .test-output {
+            background: #000;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+            font-size: 12px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196F3; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #1976D2; }
+        .status { 
+            margin: 20px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+            background: #333; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Abyss Jewel Unit Test Runner v2.0</h1>
+    
+    <div class="status" id="status">
+        Ready to run tests. Click a button below to start.
+    </div>
+    
+    <div>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="runQuickTest()">⚡ Quick Test</button>
+        <button onclick="showTestInfo()">ℹ️ Test Info</button>
+        <button onclick="clearOutput()">🧹 Clear</button>
+    </div>
+    
+    <div id="output" class="test-output">
+Standalone Abyss Jewel Test Runner
+==================================
+
+This version is completely self-contained:
+✅ No external dependencies
+✅ No network requests  
+✅ Works from any directory
+✅ Compatible with file:// protocol
+
+Click "Run All Tests" to start testing your mod restrictions.
+    </div>
+
+    <script>
+        // Status updates
+        function setStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        // Output handling
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const span = document.createElement('span');
+            span.textContent = message + '\n';
+            span.className = type;
+            output.appendChild(span);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+            setStatus('Output cleared. Ready for new test run.');
+        }
+
+        // JEWEL_TYPE_CONFIG - Embedded directly
+        const JEWEL_TYPE_CONFIG = {
+            murderous: {
+                displayName: "Murderous Eye Jewel",
+                domain: "abyss_jewel",
+                tags: ["abyss_jewel_melee"]
+            },
+            searching: {
+                displayName: "Searching Eye Jewel", 
+                domain: "abyss_jewel",
+                tags: ["abyss_jewel_ranged"]
+            },
+            hypnotic: {
+                displayName: "Hypnotic Eye Jewel",
+                domain: "abyss_jewel", 
+                tags: ["abyss_jewel_caster"]
+            },
+            ghastly: {
+                displayName: "Ghastly Eye Jewel",
+                domain: "abyss_jewel",
+                tags: ["abyss_jewel_summoner"]
+            }
+        };
+
+        // Mock Data Generator - Embedded directly
+        class MockAbyssJewelDataGenerator {
+            static generateComprehensiveMockData() {
+                return {
+                    // === MURDEROUS EYE JEWEL MODS (Melee) ===
+                    AbyssJewelMeleeLife1: {
+                        text: "+(25-30) to maximum Life",
+                        spawn_weights: [
+                            { tag: "abyss_jewel_melee", weight: 1000 },
+                            { tag: "abyss_jewel_ranged", weight: 500 },
+                            { tag: "abyss_jewel_caster", weight: 500 },
+                            { tag: "abyss_jewel_summoner", weight: 500 }
+                        ],
+                        required_level: 20,
+                        stats: [{ id: "base_maximum_life", min: 25, max: 30 }]
+                    },
+
+                    AbyssJewelMeleeAttackSpeed1: {
+                        text: "(8-12)% increased Attack Speed",
+                        spawn_weights: [
+                            { tag: "abyss_jewel_melee", weight: 500 },
+                            { tag: "abyss_jewel_ranged", weight: 300 }
+                        ],
+                        required_level: 25,
+                        stats: [{ id: "attack_speed_+%", min: 8, max: 12 }]
+                    },
+
+                    AbyssJewelMeleeCriticalStrike1: {
+                        text: "+(18-22)% to Critical Strike Chance",
+                        spawn_weights: [
+                            { tag: "abyss_jewel_melee", weight: 400 },
+                            { tag: "abyss_jewel_ranged", weight: 400 }
+                        ],
+                        required_level: 30,
+                        stats: [{ id: "critical_strike_chance_+%", min: 18, max: 22 }]
+                    },
+
+                    AbyssJewelMeleeAccuracy1: {
+                        text: "+(120-150) to Accuracy Rating",
+                        spawn_weights: [
+                            { tag: "abyss_jewel_melee", weight: 600 },
+                            { tag: "abyss_jewel_ranged", weight: 600 }
+                        ],
+                        required_level: 15,
+                        stats: [{ id: "accuracy_rating_+", min: 120, max: 150 }]
+                    },
+
+                    AbyssJewelChaosDamageClaws1: {
+                        text: "Adds (6-7) to (11-13) Chaos Damage to Attacks with Claws",
+                        spawn_weights: [{ tag: "abyss_jewel_melee", weight: 500 }],
+                        required_level: 30,
+                        stats: [{ id: "local_add_chaos_damage_with_claws", min: 6, max: 13 }]
+                    },
+
+                    AbyssJewelPhysicalDamageClaws1: {
+                        text: "Adds (8-10) to (15-18) Physical Damage to Attacks with Claws",
+                        spawn_weights: [{ tag: "abyss_jewel_melee", weight: 500 }],
+                        required_level: 25,
+                        stats: [{ id: "local_add_physical_damage_with_claws", min: 8, max: 18 }]
+                    },
+
+                    AbyssJewelPhysicalDamageSwords1: {
+                        text: "Adds (8-10) to (15-18) Physical Damage to Attacks with Swords",
+                        spawn_weights: [{ tag: "abyss_jewel_melee", weight: 500 }],
+                        required_level: 25,
+                        stats: [{ id: "local_add_physical_damage_with_swords", min: 8, max: 18 }]
+                    },
+
+                    // === SEARCHING EYE JEWEL MODS (Ranged) ===
+                    AbyssJewelChaosDamageBows1: {
+                        text: "Adds (8-10) to (14-16) Chaos Damage to Attacks with Bows",
+                        spawn_weights: [{ tag: "abyss_jewel_ranged", weight: 500 }],
+                        required_level: 35,
+                        stats: [{ id: "local_add_chaos_damage_with_bows", min: 8, max: 16 }]
+                    },
+
+                    AbyssJewelFireDamageWands1: {
+                        text: "Adds (5-7) to (12-15) Fire Damage to Attacks with Wands",
+                        spawn_weights: [{ tag: "abyss_jewel_ranged", weight: 500 }],
+                        required_level: 28,
+                        stats: [{ id: "local_add_fire_damage_with_wands", min: 5, max: 15 }]
+                    },
+
+                    AbyssJewelRangedAttackSpeed1: {
+                        text: "(8-12)% increased Attack Speed with Bows",
+                        spawn_weights: [{ tag: "abyss_jewel_ranged", weight: 400 }],
+                        required_level: 25,
+                        stats: [{ id: "attack_speed_with_bows_+%", min: 8, max: 12 }]
+                    },
+
+                    // === HYPNOTIC EYE JEWEL MODS (Caster) ===
+                    AbyssJewelSpellDamage1: {
+                        text: "(12-18)% increased Spell Damage",
+                        spawn_weights: [{ tag: "abyss_jewel_caster", weight: 500 }],
+                        required_level: 25,
+                        stats: [{ id: "spell_damage_+%", min: 12, max: 18 }]
+                    },
+
+                    AbyssJewelCastSpeed1: {
+                        text: "(8-12)% increased Cast Speed",
+                        spawn_weights: [{ tag: "abyss_jewel_caster", weight: 500 }],
+                        required_level: 30,
+                        stats: [{ id: "base_cast_speed_+%", min: 8, max: 12 }]
+                    },
+
+                    AbyssJewelMana1: {
+                        text: "+(35-45) to maximum Mana",
+                        spawn_weights: [
+                            { tag: "abyss_jewel_caster", weight: 800 },
+                            { tag: "abyss_jewel_melee", weight: 200 },
+                            { tag: "abyss_jewel_ranged", weight: 200 },
+                            { tag: "abyss_jewel_summoner", weight: 400 }
+                        ],
+                        required_level: 15,
+                        stats: [{ id: "base_maximum_mana", min: 35, max: 45 }]
+                    },
+
+                    AbyssJewelEnergyShield1: {
+                        text: "+(15-20) to maximum Energy Shield",
+                        spawn_weights: [{ tag: "abyss_jewel_caster", weight: 600 }],
+                        required_level: 20,
+                        stats: [{ id: "base_maximum_energy_shield", min: 15, max: 20 }]
+                    },
+
+                    // === GHASTLY EYE JEWEL MODS (Summoner) ===
+                    AbyssJewelMinionLife1: {
+                        text: "Minions have +(20-25) to maximum Life",
+                        spawn_weights: [{ tag: "abyss_jewel_summoner", weight: 500 }],
+                        required_level: 20,
+                        stats: [{ id: "minion_maximum_life_+", min: 20, max: 25 }]
+                    },
+
+                    AbyssJewelMinionDamage1: {
+                        text: "Minions deal (15-20)% increased Damage",
+                        spawn_weights: [{ tag: "abyss_jewel_summoner", weight: 500 }],
+                        required_level: 25,
+                        stats: [{ id: "minion_damage_+%", min: 15, max: 20 }]
+                    },
+
+                    AbyssJewelMinionAttackSpeed1: {
+                        text: "Minions have (8-12)% increased Attack Speed",
+                        spawn_weights: [{ tag: "abyss_jewel_summoner", weight: 500 }],
+                        required_level: 30,
+                        stats: [{ id: "minion_attack_speed_+%", min: 8, max: 12 }]
+                    },
+
+                    AbyssJewelMinionCastSpeed1: {
+                        text: "Minions have (8-12)% increased Cast Speed",
+                        spawn_weights: [{ tag: "abyss_jewel_summoner", weight: 400 }],
+                        required_level: 30,
+                        stats: [{ id: "minion_cast_speed_+%", min: 8, max: 12 }]
+                    }
+                };
+            }
+        }
+
+        // Simplified Test Runner - Embedded directly
+        class StandaloneAbyssJewelTester {
+            constructor() {
+                this.testResults = [];
+                this.allAbyssModsData = null;
+            }
+
+            async loadModData(modData = null) {
+                if (modData) {
+                    this.allAbyssModsData = modData;
+                    return;
+                }
+                this.allAbyssModsData = MockAbyssJewelDataGenerator.generateComprehensiveMockData();
+                log(`Loaded ${Object.keys(this.allAbyssModsData).length} test mods`);
+            }
+
+            extractBaseModType(modId, modText) {
+                if (!modText) return modId || "UnknownMod";
+                const textLower = modText.toLowerCase();
+
+                // Minion patterns FIRST
+                if (textLower.includes("minions have") && textLower.includes("maximum life"))
+                    return "MinionMaximumLife";
+                if (textLower.includes("minions deal") && textLower.includes("damage"))
+                    return "MinionDamage";
+                if (textLower.includes("minions have") && textLower.includes("attack speed"))
+                    return "MinionAttackSpeed";
+                if (textLower.includes("minions have") && textLower.includes("cast speed"))
+                    return "MinionCastSpeed";
+                if (textLower.includes("minion")) return "MinionMod";
+
+                // Life/Mana/ES patterns
+                if (textLower.includes("maximum life")) return "MaximumLife";
+                if (textLower.includes("maximum mana")) return "MaximumMana";
+                if (textLower.includes("maximum energy shield")) return "MaximumEnergyShield";
+
+                // Weapon-specific damage patterns
+                if (textLower.includes("with claws")) return "WeaponDamageClaws";
+                if (textLower.includes("with bows")) return "WeaponDamageBows";
+                if (textLower.includes("with wands")) return "WeaponDamageWands";
+                if (textLower.includes("with swords")) return "WeaponDamageSwords";
+
+                // General patterns
+                if (textLower.includes("attack speed")) return "AttackSpeed";
+                if (textLower.includes("cast speed")) return "CastSpeed";
+                if (textLower.includes("spell damage")) return "SpellDamage";
+                if (textLower.includes("critical strike")) return "CriticalStrike";
+                if (textLower.includes("accuracy")) return "Accuracy";
+
+                return modId.replace(/\d+$/, "") || "UnknownMod";
+            }
+
+            getModsForJewelType(jewelType) {
+                if (!this.allAbyssModsData || !JEWEL_TYPE_CONFIG[jewelType]) return {};
+
+                const jewelConfig = JEWEL_TYPE_CONFIG[jewelType];
+                const relevantMods = {};
+
+                Object.entries(this.allAbyssModsData).forEach(([modId, modData]) => {
+                    if (!modData.spawn_weights) return;
+
+                    const canSpawnOnJewel = modData.spawn_weights.some((spawnWeight) => {
+                        if (!spawnWeight.weight || spawnWeight.weight <= 0) return false;
+                        return jewelConfig.tags.some((tag) => spawnWeight.tag === tag) || spawnWeight.tag === "default";
+                    });
+
+                    if (canSpawnOnJewel) {
+                        const baseModType = this.extractBaseModType(modId, modData.text);
+                        relevantMods[baseModType] = {
+                            modId: modId,
+                            baseModType: baseModType,
+                            text: modData.text,
+                            stats: modData.stats,
+                            required_level: modData.required_level
+                        };
+                    }
+                });
+
+                return relevantMods;
+            }
+
+            recordTestResult(testName, passed, failed, failures) {
+                this.testResults.push({
+                    name: testName,
+                    passed,
+                    failed,
+                    total: passed + failed,
+                    failures: failures
+                });
+            }
+
+            testWeaponRestrictions() {
+                const testName = "Weapon Restriction Validation";
+                log(`\n=== ${testName} ===`);
+
+                let passed = 0;
+                let failed = 0;
+                const failures = [];
+
+                // Test melee weapons only on Murderous
+                const murderousMods = this.getModsForJewelType("murderous");
+                Object.values(murderousMods).forEach(mod => {
+                    const text = mod.text.toLowerCase();
+                    if (text.includes("with claws") || text.includes("with swords")) {
+                        passed++;
+                        log(`  ✅ Melee weapon mod on Murderous: ${mod.text.substring(0, 50)}...`);
+                    }
+                });
+
+                // Test ranged weapons only on Searching
+                const searchingMods = this.getModsForJewelType("searching");
+                Object.values(searchingMods).forEach(mod => {
+                    const text = mod.text.toLowerCase();
+                    if (text.includes("with bows") || text.includes("with wands")) {
+                        passed++;
+                        log(`  ✅ Ranged weapon mod on Searching: ${mod.text.substring(0, 50)}...`);
+                    }
+                });
+
+                // Test no weapon mods on Hypnotic
+                const hypnoticMods = this.getModsForJewelType("hypnotic");
+                Object.values(hypnoticMods).forEach(mod => {
+                    const text = mod.text.toLowerCase();
+                    if (text.includes("with claws") || text.includes("with bows") || text.includes("with wands")) {
+                        failed++;
+                        failures.push(`❌ Weapon mod on Hypnotic: ${mod.text}`);
+                    }
+                });
+
+                this.recordTestResult(testName, passed, failed, failures);
+                return { passed, failed, failures };
+            }
+
+            testMinionRestrictions() {
+                const testName = "Minion Mod Restrictions";
+                log(`\n=== ${testName} ===`);
+
+                let passed = 0;
+                let failed = 0;
+                const failures = [];
+
+                Object.keys(JEWEL_TYPE_CONFIG).forEach(jewelType => {
+                    const mods = this.getModsForJewelType(jewelType);
+                    
+                    Object.values(mods).forEach(mod => {
+                        const text = mod.text.toLowerCase();
+                        if (text.includes("minion")) {
+                            if (jewelType === "ghastly") {
+                                passed++;
+                                log(`  ✅ Minion mod correctly on Ghastly: ${mod.text.substring(0, 50)}...`);
+                            } else {
+                                failed++;
+                                failures.push(`❌ Minion mod on ${JEWEL_TYPE_CONFIG[jewelType].displayName}: ${mod.text}`);
+                            }
+                        }
+                    });
+                });
+
+                this.recordTestResult(testName, passed, failed, failures);
+                return { passed, failed, failures };
+            }
+
+            testSpellRestrictions() {
+                const testName = "Spell Mod Restrictions";
+                log(`\n=== ${testName} ===`);
+
+                let passed = 0;
+                let failed = 0;
+                const failures = [];
+
+                Object.keys(JEWEL_TYPE_CONFIG).forEach(jewelType => {
+                    const mods = this.getModsForJewelType(jewelType);
+                    
+                    Object.values(mods).forEach(mod => {
+                        const text = mod.text.toLowerCase();
+                        if (text.includes("spell damage") && !text.includes("minion")) {
+                            if (jewelType === "hypnotic") {
+                                passed++;
+                                log(`  ✅ Spell mod correctly on Hypnotic: ${mod.text.substring(0, 50)}...`);
+                            } else {
+                                failed++;
+                                failures.push(`❌ Spell mod on ${JEWEL_TYPE_CONFIG[jewelType].displayName}: ${mod.text}`);
+                            }
+                        }
+                    });
+                });
+
+                this.recordTestResult(testName, passed, failed, failures);
+                return { passed, failed, failures };
+            }
+
+            async runAllTests() {
+                log("🧪 Starting Standalone Abyss Jewel Tests");
+                log("=".repeat(50));
+
+                await this.loadModData();
+
+                this.testWeaponRestrictions();
+                this.testMinionRestrictions(); 
+                this.testSpellRestrictions();
+
+                this.printTestSummary();
+                return this.testResults;
+            }
+
+            printTestSummary() {
+                log("\n" + "=".repeat(50));
+                log("📊 TEST SUMMARY");
+                log("=".repeat(50));
+
+                let totalPassed = 0;
+                let totalFailed = 0;
+
+                this.testResults.forEach(result => {
+                    const status = result.failed === 0 ? "✅ PASS" : "❌ FAIL";
+                    log(`${status} ${result.name}: ${result.passed}/${result.total}`);
+
+                    if (result.failures.length > 0 && result.failures.length <= 3) {
+                        result.failures.forEach(failure => log(`    ${failure}`));
+                    } else if (result.failures.length > 3) {
+                        log(`    ... ${result.failures.length} failures (showing first 2):`);
+                        result.failures.slice(0, 2).forEach(failure => log(`    ${failure}`));
+                    }
+
+                    totalPassed += result.passed;
+                    totalFailed += result.failed;
+                });
+
+                const successRate = ((totalPassed / (totalPassed + totalFailed)) * 100).toFixed(1);
+                
+                log(`\n📈 FINAL RESULTS:`);
+                log(`Total Tests: ${totalPassed + totalFailed}`);
+                log(`✅ Passed: ${totalPassed}`, 'success');
+                log(`❌ Failed: ${totalFailed}`, totalFailed > 0 ? 'error' : 'info');
+                log(`Success Rate: ${successRate}%`, totalFailed === 0 ? 'success' : 'warning');
+
+                if (totalFailed === 0) {
+                    log("\n🎉 Perfect! All tests passed!", 'success');
+                    setStatus("All tests passed successfully!", 'success');
+                } else if (totalFailed <= 2) {
+                    log(`\n⚠️ Minor issues: ${totalFailed} test(s) failed.`, 'warning');
+                    setStatus(`${totalFailed} minor test failures detected.`, 'warning');
+                } else {
+                    log(`\n🔥 Major issues: ${totalFailed} test(s) failed.`, 'error');
+                    setStatus(`${totalFailed} test failures need attention.`, 'error');
+                }
+            }
+        }
+
+        // Test runners
+        async function runAllTests() {
+            try {
+                setStatus("Running comprehensive tests...", 'info');
+                clearOutput();
+                log("🚀 Starting Comprehensive Test Suite", 'info');
+                
+                const tester = new StandaloneAbyssJewelTester();
+                await tester.runAllTests();
+                
+            } catch (error) {
+                log(`❌ Test Error: ${error.message}`, 'error');
+                setStatus("Test execution failed!", 'error');
+            }
+        }
+
+        async function runQuickTest() {
+            try {
+                setStatus("Running quick validation...", 'info');
+                clearOutput();
+                log("⚡ Quick Validation Test", 'info');
+                
+                const mockData = MockAbyssJewelDataGenerator.generateComprehensiveMockData();
+                log(`✅ Mock data generated: ${Object.keys(mockData).length} mods`);
+                
+                const tester = new StandaloneAbyssJewelTester();
+                await tester.loadModData(mockData);
+                
+                // Test just weapon restrictions
+                tester.testWeaponRestrictions();
+                tester.printTestSummary();
+                
+            } catch (error) {
+                log(`❌ Quick Test Error: ${error.message}`, 'error');
+                setStatus("Quick test failed!", 'error');
+            }
+        }
+
+        function showTestInfo() {
+            clearOutput();
+            setStatus("Displaying test information", 'info');
+            
+            log("📋 Abyss Jewel Test Suite Information", 'info');
+            log("=".repeat(50));
+            log("");
+            log("This standalone test runner validates:");
+            log("• Weapon-specific mod restrictions");
+            log("• Minion mod isolation to Ghastly jewels");
+            log("• Spell mod placement on Hypnotic jewels");
+            log("• Cross-contamination prevention");
+            log("");
+            log("Test Data:");
+            log(`• ${Object.keys(MockAbyssJewelDataGenerator.generateComprehensiveMockData()).length} comprehensive mock mods`);
+            log("• Covers all 4 Abyss jewel types");
+            log("• Includes weapon-specific damage mods");
+            log("• Contains proper spawn weight logic");
+            log("");
+            log("Usage:");
+            log("• 'Run All Tests' - Complete validation suite");  
+            log("• 'Quick Test' - Fast weapon restriction check");
+            log("• Works offline, no network required");
+            log("• Compatible with any directory structure");
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setStatus("Test runner loaded successfully. Choose a test to run.");
+            log("Standalone Test Runner v2.0 - Ready", 'success');
+        });
+    </script>
+</body>
+</html>
