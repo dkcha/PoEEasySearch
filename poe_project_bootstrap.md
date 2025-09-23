@@ -1,4 +1,4 @@
-# Path of Exile Trade Helper - Abyss Jewels Edition - Project Bootstrap v14.0
+# Path of Exile Trade Helper - Abyss Jewels Edition - Project Bootstrap v15.0
 
 ## Project Overview
 A specialized browser extension focused exclusively on Abyss Jewel trading in Path of Exile. Features advanced fuzzy search, intelligent tier range selection, seamless auto-fill integration with the official trade site, **instant auto-fill operation**, **precise damage value calculation using float precision**, **complete weapon mod coverage using official game data**, and **comprehensive test suite validation**.
@@ -10,7 +10,7 @@ A specialized browser extension focused exclusively on Abyss Jewel trading in Pa
 - Hypnotic Eye Jewel (Caster builds) - Spell and caster mods available
 - Ghastly Eye Jewel (Summoner builds) - All minion mods available
 
-## ✅ CURRENT STATUS - FULLY FUNCTIONAL (v14.0)
+## ✅ CURRENT STATUS - FULLY FUNCTIONAL (v15.0)
 
 ### Core Functionality Status
 - ✅ **Extension loads and runs** without errors
@@ -24,24 +24,38 @@ A specialized browser extension focused exclusively on Abyss Jewel trading in Pa
 - ✅ **Dropdown interaction** (enhanced event triggering)
 - ✅ **Mod value setting** (min/max values applied correctly)
 
-### 🔧 RESOLVED ISSUES - ELEMENT TARGETING FIXED
+### 🚀 NEXT PHASE - ADVANCED SEARCH MODES
 
-#### Previous Critical Issues (RESOLVED)
-- ❌ **Wrong input field targeting** → ✅ **Fixed with proper selectors**
-- ❌ **Base item selection not working** → ✅ **Fixed with enhanced dropdown logic**
-- ❌ **Extension typing in wrong forms** → ✅ **Fixed with specific field identification**
+#### Planned Enhancement: COUNT Mode Implementation
+**Current State**: Extension uses default "AND" mode (all mods must be present)
+**Target**: Add "COUNT" mode support (X out of Y mods must be present)
 
-#### Resolution Details
-**Root Cause Identified**: Timing and event triggering issues
-- Dropdowns weren't appearing when extension tried to select options
-- Vue.js/React components needed specific event sequences
-- Wait times were insufficient for dynamic content loading
+**Implementation Details**:
+- **UI Component**: Add search mode selector to popup (AND vs COUNT)
+- **COUNT Input**: Number input for "at least X mods" when COUNT mode selected  
+- **Trade Site Integration**: Interact with `.btn.edit-btn` in stat filters section
+- **Technical Requirements**:
+  - Find edit button in `.search-advanced-pane.brown`
+  - Click to reveal dropdown with AND/COUNT options
+  - Select COUNT option and set value
+  - Integrate with existing auto-fill pipeline
+
+**User Experience Improvement**:
+- More flexible searches: "Find jewels with at least 3 of these 5 mods"
+- Better for build planning when perfect items are expensive
+- Reduced search time for "good enough" items
+
+### 🔧 RESOLVED ISSUES - ELEMENT TARGETING FIXED (Previous Phase)
+
+#### Root Cause Resolution
+**Problem**: Timing and event triggering issues with Vue.js components
+**Solution**: Enhanced event sequences and proper wait times
 
 **Key Fixes Applied**:
 1. **Enhanced Event Triggering**: Added `focus()`, `click()`, `input`, `keydown` (ArrowDown) events
 2. **Increased Wait Times**: Extended from 300ms to 800ms for dropdown population
 3. **Multiple Event Dispatching**: Comprehensive event sequences for framework reactivity
-4. **Advanced Text Matching**: Multiple search variations and keyword matching for stat selection
+4. **Advanced Text Matching**: Multiple search variations and keyword matching
 5. **Proper Element Targeting**: Separate functions for base item vs stat filter interactions
 
 ### 📁 FILE STATUS - PRODUCTION READY
@@ -53,13 +67,13 @@ A specialized browser extension focused exclusively on Abyss Jewel trading in Pa
 - ✅ **constants.js** (25 lines) - Configuration constants
 - ✅ **popup.html** (Complete UI structure)
 
-#### Code Quality Improvements
+#### Code Quality Status
 - **Removed**: All debug console logs, emojis in comments, debug exports
 - **Added**: Function-level comments explaining complex logic
 - **Enhanced**: Error handling and edge case management
-- **Streamlined**: From 930+ lines to 437 lines in content script while maintaining functionality
+- **Production Ready**: Clean, maintainable codebase
 
-### 🎮 FUNCTIONALITY VERIFICATION
+### 🎮 VERIFIED FUNCTIONALITY
 
 #### Auto-Fill Pipeline Working
 1. **Data Loading**: 548 abyss jewel mods loaded from GitHub successfully
@@ -77,7 +91,7 @@ A specialized browser extension focused exclusively on Abyss Jewel trading in Pa
 
 ## 🔍 TECHNICAL ARCHITECTURE
 
-### Event System (Fixed)
+### Event System (Stable)
 - **Dropdown Triggering**: Multi-event sequences ensure framework compatibility
 - **Value Setting**: Native property setters + comprehensive event dispatching
 - **Page Stability**: Advanced waiting logic for dynamic content
@@ -92,52 +106,62 @@ A specialized browser extension focused exclusively on Abyss Jewel trading in Pa
 - **Tier Modal**: Interactive tier range selection with value preview
 - **Status System**: Auto-clearing messages with collision prevention
 
-## 🚀 DEPLOYMENT STATUS
+## 📈 CHROME WEB STORE READINESS
 
-### Production Ready Features
-- Clean, commented codebase
-- Comprehensive error handling
-- No debug artifacts or corrupted sections
-- Optimized for performance and reliability
+### Publishing Requirements Status
+- ✅ **Developer Registration**: $5 fee required (one-time)
+- ✅ **Extension Package**: All files ready for .zip upload
+- ⚠️ **Store Listing Assets**: Need icons (16x16, 48x48, 128x128) and screenshots
+- ⚠️ **Privacy Policy**: May be required depending on data collection assessment
+- ⚠️ **Path of Exile ToS**: Verify automation tools compliance
 
-### Testing Verification
-- Base item selection: ✅ Working
-- Stat filter addition: ✅ Working  
-- Value setting: ✅ Working
-- Multi-mod searches: ✅ Working
-- Edge cases handled: ✅ Working
+### Important Considerations
+- **Code Visibility**: Extensions are NOT obfuscated - all source code visible to users
+- **No Recurring Fees**: Only the $5 registration fee, no hosting or maintenance costs
+- **Review Process**: Automated + potential manual review for trade site interactions
 
-## 📈 PERFORMANCE METRICS
+## 🔄 DEVELOPMENT ROADMAP
 
-### Speed Optimizations
-- **Instant Operation**: Random delays (0.1-10ms) avoid detection
-- **Smart Caching**: Mod mappings cached after first load
-- **Efficient DOM**: Minimal selector queries with fallback logic
-- **Optimized Events**: Only necessary event dispatching
+### Phase 1: COUNT Mode Implementation (Next)
+- Add search mode selector to popup UI
+- Implement trade site edit button interaction
+- Add count value input and validation
+- Test with various mod combinations
 
-### Reliability Features
-- **Retry Mechanisms**: Background script handles failed injections
-- **Fallback Logic**: Multiple selector strategies for element targeting
-- **Error Recovery**: Graceful degradation when components fail
-- **State Management**: Clean global state without memory leaks
+### Phase 2: UI/UX Enhancements (Future)
+- Inline tier selection (replace modal)
+- Search suggestions and "did you mean" features
+- Mod category indicators
+- Save/load search templates
+- Undo functionality for accidental changes
 
-## 🔄 NEXT DEVELOPMENT PHASE
-
-### Potential Enhancements (Future)
-- Saved search templates
+### Phase 3: Advanced Features (Future)
+- Bulk mod operations
 - Price estimation integration
-- Bulk search capabilities
+- Build template sharing
 - Advanced filtering options
 
-### Maintenance Notes
-- Codebase is stable and production-ready
-- All critical issues resolved
-- Extension functions reliably across different browsers
-- Trade site compatibility maintained
+## 📋 CURRENT DEVELOPMENT STATUS
 
-## 📋 FINAL VALIDATION
+**Phase**: Ready for COUNT mode implementation
+**Stability**: All core functionality verified and stable
+**Code Quality**: Production-ready with comprehensive documentation
+**Next Steps**: Implement search mode selection and trade site integration
+**Estimated Complexity**: Medium - requires UI changes and trade site interaction enhancement
 
-**Status**: Extension fully functional and ready for use
-**Last Updated**: Project Bootstrap v14.0
-**Critical Issues**: All resolved
-**Code Quality**: Production standard with comprehensive documentation
+## 🔧 TECHNICAL NOTES FOR COUNT IMPLEMENTATION
+
+### Key Trade Site Elements Identified
+- **Edit Button**: `.btn.edit-btn` in `.search-advanced-pane.brown` section
+- **Dropdown Options**: AND/COUNT options revealed after edit button click
+- **Count Input**: Number field for specifying required mod count
+- **Integration Point**: Insert after mod filters are added in `handleAutoFill`
+
+### Implementation Strategy
+1. Add UI components to popup for mode selection
+2. Pass mode preference in config object to content script
+3. Create `setStatFilterMode()` function for trade site interaction
+4. Integrate with existing auto-fill pipeline
+5. Add validation and error handling
+
+**Status**: Ready to begin implementation in new development session

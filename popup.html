@@ -49,7 +49,8 @@
       }
 
       select,
-      input[type="text"] {
+      input[type="text"],
+      input[type="number"] {
         width: 100%;
         padding: 8px 12px;
         border: 2px solid #555;
@@ -61,17 +62,93 @@
       }
 
       select:focus,
-      input[type="text"]:focus {
+      input[type="text"]:focus,
+      input[type="number"]:focus {
         outline: none;
         border-color: #d4af37;
         box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
       }
 
       select:disabled,
-      input[type="text"]:disabled {
+      input[type="text"]:disabled,
+      input[type="number"]:disabled {
         background: #222;
         color: #666;
         cursor: not-allowed;
+      }
+
+      /* Search Mode Selector */
+      .search-mode-section {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #555;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+
+      .search-mode-selector {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .mode-option {
+        flex: 1;
+        padding: 8px 12px;
+        background: #444;
+        border: 2px solid #666;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 13px;
+        font-weight: bold;
+        transition: all 0.2s;
+      }
+
+      .mode-option.active {
+        background: #d4af37;
+        color: #1a1a1a;
+        border-color: #d4af37;
+      }
+
+      .mode-option:hover:not(.active) {
+        background: #555;
+        border-color: #777;
+      }
+
+      .count-input-container {
+        display: none;
+        margin-top: 8px;
+      }
+
+      .count-input-container.visible {
+        display: block;
+      }
+
+      .count-input-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .count-input-row label {
+        margin: 0;
+        color: #a0a0a0;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .count-input-row input {
+        width: 60px;
+        padding: 6px 8px;
+        font-size: 13px;
+      }
+
+      .count-explanation {
+        font-size: 11px;
+        color: #a0a0a0;
+        margin-top: 4px;
+        font-style: italic;
       }
 
       .search-section {
@@ -385,6 +462,26 @@
       <select id="jewelType">
         <option value="">Select Abyss Jewel Type</option>
       </select>
+    </div>
+
+    <!-- NEW: Search Mode Selection -->
+    <div class="search-mode-section">
+      <label>Search Mode:</label>
+      <div class="search-mode-selector">
+        <div class="mode-option active" data-mode="and">All Mods (AND)</div>
+        <div class="mode-option" data-mode="count">At Least X (COUNT)</div>
+      </div>
+
+      <div class="count-input-container" id="countInputContainer">
+        <div class="count-input-row">
+          <label>At least</label>
+          <input type="number" id="countValue" min="1" max="6" value="3" />
+          <label>of the selected mods</label>
+        </div>
+        <div class="count-explanation">
+          Finds jewels with at least the specified number of your selected mods
+        </div>
+      </div>
     </div>
 
     <div class="search-section">

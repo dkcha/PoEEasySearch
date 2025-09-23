@@ -1,4 +1,4 @@
-// PoE Easy Search Content Script v13.1
+// PoE Easy Search Content Script v16.0 - COUNT Mode Support
 // Utility function for random delays to avoid detection
 const wait = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms * 0.1 + Math.random() * 10));
@@ -12,8 +12,7 @@ async function loadModsData() {
   if (allAbyssModsData) return true;
 
   try {
-    const url =
-      "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/all_abyss_jewel_mods.json";
+    const url = CONFIG.GITHUB_URLS.ALL_ABYSS_MODS;
     const response = await fetch(url);
     const data = await response.json();
     allAbyssModsData = data;
@@ -252,6 +251,122 @@ function selectFromBaseItemDropdown(targetText) {
   return false;
 }
 
+// NEW: Set stat filter mode (AND/COUNT) on the trade site
+async function setStatFilterMode(mode, countValue = null) {
+  if (mode === "and") {
+    // Default mode - no changes needed
+    return true;
+  }
+
+  if (mode === "count" && countValue) {
+    try {
+      // Wait for all mod filters to be added first
+      await wait(1000);
+
+      // Find the search advanced pane
+      const advancedPane = document.querySelector(
+        ".search-advanced-pane.brown"
+      );
+      if (!advancedPane) {
+        console.warn("Could not find advanced search pane");
+        return false;
+      }
+
+      // Look for the edit button
+      const editButton = advancedPane.querySelector(".btn.edit-btn");
+      if (!editButton) {
+        console.warn("Edit button not found - COUNT mode may not be available");
+        return false;
+      }
+
+      // Click the edit button to reveal mode options
+      editButton.focus();
+      editButton.click();
+      await wait(800);
+
+      // Look for the specific multiselect dropdown that appears
+      const multiselectDropdown = document.querySelector(
+        ".multiselect.filter-select.filter-select-title.filter-select-mutate.multiselect--active"
+      );
+
+      if (!multiselectDropdown) {
+        console.warn("Multiselect dropdown not found after clicking edit");
+        return false;
+      }
+
+      // Look for the options within the multiselect dropdown
+      const dropdownOptions = multiselectDropdown.querySelectorAll(
+        ".multiselect__option:not(.multiselect__option--disabled)"
+      );
+
+      if (dropdownOptions.length === 0) {
+        console.warn("No options found in multiselect dropdown");
+        return false;
+      }
+
+      // Find the COUNT option
+      const countOption = Array.from(dropdownOptions).find((option) => {
+        const text = option.textContent.trim().toLowerCase();
+        return (
+          text.includes("count") ||
+          text.includes("minimum") ||
+          text.includes("at least")
+        );
+      });
+
+      if (!countOption) {
+        console.warn(
+          "COUNT option not found in dropdown. Available options:",
+          Array.from(dropdownOptions).map((o) => `"${o.textContent.trim()}"`)
+        );
+        return false;
+      }
+
+      // Click the COUNT option
+      countOption.scrollIntoView({ block: "nearest" });
+      countOption.click();
+      await wait(500);
+
+      // After selecting COUNT, look for the number input that should appear
+      // It might appear in the same area or in a new location
+      const countInputSelectors = [
+        '.search-advanced-pane.brown input[type="number"]',
+        '.filter-select input[type="number"]',
+        'input[type="number"]',
+        'input[placeholder*="count"]',
+        'input[placeholder*="minimum"]',
+      ];
+
+      let countInput = null;
+      for (const selector of countInputSelectors) {
+        countInput = document.querySelector(selector);
+        if (countInput) break;
+      }
+
+      if (countInput) {
+        // Focus and set the count value
+        countInput.focus();
+        setInputValueInstantly(countInput, countValue.toString());
+        await wait(200);
+
+        // Trigger events to ensure the value is registered
+        countInput.dispatchEvent(new Event("blur", { bubbles: true }));
+      } else {
+        console.warn(
+          "Count input field not found after selecting COUNT option"
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Failed to set COUNT mode:", error);
+      return false;
+    }
+  }
+
+  return false;
+}
+
 // Add a single mod filter with tier range selection
 async function addSingleModFilterInstantly(mod, filterIndex) {
   try {
@@ -408,7 +523,7 @@ function selectFromStatFilterDropdown(targetText) {
   return false;
 }
 
-// Main auto-fill handler coordinating all operations
+// ENHANCED: Main auto-fill handler with COUNT mode support
 async function handleAutoFill(config) {
   await wait(500);
 
@@ -425,13 +540,24 @@ async function handleAutoFill(config) {
 
     if (config.searchMode === "with-mods" && config.selectedMods?.length > 0) {
       await addModFiltersInstantly(config.selectedMods);
+
+      // NEW: Set stat filter mode if COUNT mode is selected
+      if (config.statFilterMode === "count" && config.countValue) {
+        const modeSet = await setStatFilterMode("count", config.countValue);
+        if (!modeSet) {
+          console.warn("Failed to set COUNT mode - continuing with AND mode");
+        }
+      }
     }
+
+    const modeText =
+      config.statFilterMode === "count"
+        ? `COUNT (at least ${config.countValue})`
+        : "AND";
 
     return {
       success: true,
-      message: `Successfully configured search for ${
-        CONFIG.JEWEL_MAPPINGS[config.jewelType]
-      }`,
+      message: `Successfully configured search for ${config.jewelDisplayName} with ${modeText} mode`,
     };
   } catch (error) {
     console.error("Auto-fill failed:", error);

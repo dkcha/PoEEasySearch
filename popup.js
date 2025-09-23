@@ -1,9 +1,10 @@
-// PoE Trade Helper - Popup Script
+// PoE Trade Helper - Complete Popup Script with COUNT Mode Support
 // Global state management
 let currentJewelType = "";
 let selectedMods = [];
 let allAbyssModsData = null;
 let currentModForTierSelection = null;
+let currentSearchMode = "and"; // New: track search mode
 let elements = {};
 
 // Configuration for different jewel types and their mod domains
@@ -37,6 +38,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     initializeElements();
     attachEventListeners();
     populateJewelDropdown();
+    initializeSearchModeSelector();
     showStatusMessage("Extension loaded successfully", "success");
   } catch (error) {
     console.error("Failed to initialize popup:", error);
@@ -46,8 +48,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 // Load mod data from GitHub repository
 async function loadDataFiles() {
-  const GITHUB_BASE_URL =
-    "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/";
+  const GITHUB_BASE_URL = CONFIG.GITHUB_URLS.BASE_URL;
   const targetFile = "all_abyss_jewel_mods.json";
   const fullURL = `${GITHUB_BASE_URL}${targetFile}`;
 
@@ -70,6 +71,75 @@ async function loadDataFiles() {
     console.error("Data loading error:", error);
     throw error;
   }
+}
+
+// Initialize search mode selector
+function initializeSearchModeSelector() {
+  const modeOptions = document.querySelectorAll(".mode-option");
+  const countContainer = document.getElementById("countInputContainer");
+  const countValue = document.getElementById("countValue");
+
+  modeOptions.forEach((option) => {
+    option.addEventListener("click", function () {
+      const mode = this.getAttribute("data-mode");
+
+      // Update visual selection
+      modeOptions.forEach((opt) => opt.classList.remove("active"));
+      this.classList.add("active");
+
+      // Update state
+      currentSearchMode = mode;
+
+      // Show/hide count input
+      if (mode === "count") {
+        countContainer.classList.add("visible");
+        updateCountInputMax();
+      } else {
+        countContainer.classList.remove("visible");
+      }
+
+      // Update button text
+      updateAutoFillButton();
+    });
+  });
+
+  // Handle count value changes
+  if (countValue) {
+    countValue.addEventListener("input", updateAutoFillButton);
+    countValue.addEventListener("change", validateCountValue);
+  }
+}
+
+// Update maximum count value based on selected mods
+function updateCountInputMax() {
+  const countValue = document.getElementById("countValue");
+  if (!countValue) return;
+
+  const maxCount = Math.max(1, selectedMods.length);
+  countValue.setAttribute("max", maxCount);
+
+  // Adjust current value if it exceeds the new maximum
+  if (parseInt(countValue.value) > maxCount) {
+    countValue.value = Math.max(1, Math.min(maxCount, 3));
+  }
+}
+
+// Validate count input value
+function validateCountValue() {
+  const countValue = document.getElementById("countValue");
+  if (!countValue) return;
+
+  const value = parseInt(countValue.value);
+  const maxValue = parseInt(countValue.getAttribute("max"));
+  const minValue = parseInt(countValue.getAttribute("min"));
+
+  if (value < minValue) {
+    countValue.value = minValue;
+  } else if (value > maxValue) {
+    countValue.value = maxValue;
+  }
+
+  updateAutoFillButton();
 }
 
 // Process and group mods by jewel type with tier aggregation
@@ -561,6 +631,7 @@ function initializeElements() {
     "tierRangeInfo",
     "confirmTierSelection",
     "closeTierModal",
+    "countValue",
   ];
 
   elementIds.forEach((id) => {
@@ -628,6 +699,8 @@ function handleJewelTypeChange(event) {
   }
 
   updateAutoFillButton();
+  updateCountInputMax();
+
   if (currentJewelType) {
     showStatusMessage(
       `Selected ${JEWEL_TYPE_CONFIG[currentJewelType].displayName}`,
@@ -939,6 +1012,7 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
 
   updateSelectedModsDisplay();
   updateAutoFillButton();
+  updateCountInputMax();
   clearSearchInput();
 
   const tierDisplay = isExactTier ? fromTier : `${fromTier}-${toTier}`;
@@ -1018,6 +1092,7 @@ function removeSelectedMod(index) {
     const removedMod = selectedMods.splice(index, 1)[0];
     updateSelectedModsDisplay();
     updateAutoFillButton();
+    updateCountInputMax();
     showStatusMessage(`Removed ${removedMod.name}`, "info");
   }
 }
@@ -1032,19 +1107,27 @@ function clearSearchResults() {
   if (elements.searchResults) elements.searchResults.innerHTML = "";
 }
 
-// Update auto-fill button text based on current state
+// Update auto-fill button text based on current state and search mode
 function updateAutoFillButton() {
   if (!elements.autoFillBtn) return;
 
   const hasJewelType = !!currentJewelType;
   const hasMods = selectedMods.length > 0;
+  const countValue = elements.countValue
+    ? parseInt(elements.countValue.value)
+    : 3;
 
   elements.autoFillBtn.disabled = !hasJewelType;
 
   if (hasMods) {
-    elements.autoFillBtn.textContent = `Search with ${selectedMods.length} mod${
-      selectedMods.length !== 1 ? "s" : ""
-    }`;
+    if (currentSearchMode === "count") {
+      const validCount = Math.min(countValue, selectedMods.length);
+      elements.autoFillBtn.textContent = `Search: At least ${validCount} of ${selectedMods.length} mods`;
+    } else {
+      elements.autoFillBtn.textContent = `Search with ${
+        selectedMods.length
+      } mod${selectedMods.length !== 1 ? "s" : ""} (AND)`;
+    }
   } else if (hasJewelType) {
     elements.autoFillBtn.textContent = `Search ${JEWEL_TYPE_CONFIG[currentJewelType].displayName}`;
   } else {
@@ -1052,7 +1135,7 @@ function updateAutoFillButton() {
   }
 }
 
-// Handle auto-fill button click and send config to background script
+// Handle auto-fill button click with COUNT mode support
 async function handleAutoFill() {
   if (!currentJewelType) {
     showStatusMessage("Please select a jewel type", "error");
@@ -1071,15 +1154,29 @@ async function handleAutoFill() {
     };
   });
 
+  // Add search mode configuration
   const config = {
     jewelType: currentJewelType,
     jewelDisplayName: JEWEL_TYPE_CONFIG[currentJewelType].displayName,
     searchMode: searchMode,
     selectedMods: processedMods,
+    statFilterMode: currentSearchMode, // 'and' or 'count'
+    countValue:
+      currentSearchMode === "count"
+        ? Math.min(
+            parseInt(elements.countValue?.value || 3),
+            selectedMods.length
+          )
+        : undefined,
     timestamp: Date.now(),
   };
 
-  showStatusMessage("Opening trade site...", "info");
+  const modeText =
+    currentSearchMode === "count"
+      ? `COUNT (at least ${config.countValue})`
+      : "AND";
+
+  showStatusMessage(`Opening trade site with ${modeText} mode...`, "info");
 
   try {
     const response = await chrome.runtime.sendMessage({
