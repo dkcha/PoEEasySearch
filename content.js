@@ -1,18 +1,16 @@
 // PoE Easy Search Content Script v16.0 - COUNT Mode Support
-// Utility function for random delays to avoid detection
 const wait = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms * 0.1 + Math.random() * 10));
 
-// Global state management
 let allAbyssModsData = null;
 let modMappings = {};
 
-// Load mod data from GitHub repository
 async function loadModsData() {
   if (allAbyssModsData) return true;
 
   try {
-    const url = CONFIG.GITHUB_URLS.ALL_ABYSS_MODS;
+    const url =
+      "https://raw.githubusercontent.com/dkcha/PoEEasySearch/refs/heads/main/data/all_abyss_jewel_mods.json";
     const response = await fetch(url);
     const data = await response.json();
     allAbyssModsData = data;
@@ -25,7 +23,6 @@ async function loadModsData() {
   }
 }
 
-// Create mappings for mod text matching and normalization
 function createSimpleModMappings() {
   if (!allAbyssModsData) return;
 
@@ -52,7 +49,6 @@ function createSimpleModMappings() {
   });
 }
 
-// Convert specific mod values to generic placeholders for trade site matching
 function genericizeModText(modText) {
   if (!modText) return "";
   return modText
@@ -63,7 +59,6 @@ function genericizeModText(modText) {
     .trim();
 }
 
-// Find matching mod text from our dataset
 function findModMapping(searchTerm) {
   if (!modMappings) return null;
 
@@ -90,7 +85,6 @@ function findModMapping(searchTerm) {
   return null;
 }
 
-// Fallback mod mappings if data loading fails
 function createFallbackMappings() {
   modMappings = {
     "added life": "+# to maximum Life",
@@ -107,7 +101,6 @@ function createFallbackMappings() {
   };
 }
 
-// Map mod names to trade site stat text
 function mapModToTradeStat(modName, mod) {
   if (mod && mod.searchText) {
     return mod.searchText;
@@ -116,7 +109,6 @@ function mapModToTradeStat(modName, mod) {
   return mapping || modName;
 }
 
-// Set input values with proper event triggering for Vue/React compatibility
 function setInputValueInstantly(input, value) {
   if (!input || input.disabled) return false;
 
@@ -148,7 +140,6 @@ function setInputValueInstantly(input, value) {
   return input.value === value;
 }
 
-// Set base item type (jewel selection) with proper dropdown triggering
 async function setBaseItemTypeInstantly(jewelType) {
   const displayName = CONFIG.JEWEL_MAPPINGS[jewelType];
   if (!displayName) throw new Error(`Unknown jewel type: ${jewelType}`);
@@ -159,7 +150,6 @@ async function setBaseItemTypeInstantly(jewelType) {
   );
   if (!searchInput) throw new Error("Could not find base item search field");
 
-  // Clear and focus input
   searchInput.focus();
   searchInput.click();
   searchInput.value = "";
@@ -167,13 +157,11 @@ async function setBaseItemTypeInstantly(jewelType) {
   searchInput.dispatchEvent(new Event("input", { bubbles: true }));
   await wait(200);
 
-  // Set the jewel name
   const valueSet = setInputValueInstantly(searchInput, displayName);
   if (!valueSet) {
     throw new Error("Failed to set base item value");
   }
 
-  // Trigger dropdown appearance with multiple events
   searchInput.focus();
   searchInput.click();
 
@@ -184,7 +172,6 @@ async function setBaseItemTypeInstantly(jewelType) {
 
   await wait(800);
 
-  // Select from dropdown
   const baseItemSelected = selectFromBaseItemDropdown(displayName);
 
   if (!baseItemSelected) {
@@ -197,13 +184,11 @@ async function setBaseItemTypeInstantly(jewelType) {
   await wait(100);
 }
 
-// Select base item from dropdown with enhanced matching logic
 function selectFromBaseItemDropdown(targetText) {
   const normalizeText = (text) =>
     text.toLowerCase().replace(/\s+/g, " ").trim();
   const normalizedTarget = normalizeText(targetText);
 
-  // Try multiple selectors to find the correct dropdown
   const possibleSelectors = [
     ".search-select .multiselect__content .multiselect__option:not(.multiselect__option--disabled)",
     ".multiselect__content .multiselect__option:not(.multiselect__option--disabled)",
@@ -214,12 +199,10 @@ function selectFromBaseItemDropdown(targetText) {
     const baseItemOptions = document.querySelectorAll(selector);
     if (baseItemOptions.length === 0) continue;
 
-    // Verify we're looking at jewel options, not other items
     const jewelOptions = Array.from(baseItemOptions)
       .filter((opt) => opt.textContent.toLowerCase().includes("jewel"))
       .slice(0, 10);
 
-    // Try exact match first
     for (const option of baseItemOptions) {
       const optionText = option.textContent.trim();
       const normalizedOption = normalizeText(optionText);
@@ -231,7 +214,6 @@ function selectFromBaseItemDropdown(targetText) {
       }
     }
 
-    // Try partial matching if we found jewel options
     if (jewelOptions.length > 0) {
       for (const option of baseItemOptions) {
         const optionText = option.textContent.trim();
@@ -251,19 +233,15 @@ function selectFromBaseItemDropdown(targetText) {
   return false;
 }
 
-// NEW: Set stat filter mode (AND/COUNT) on the trade site
 async function setStatFilterMode(mode, countValue = null) {
-  if (mode === "and") {
-    // Default mode - no changes needed
+  if (mode === CONFIG.SEARCH_MODES.AND) {
     return true;
   }
 
-  if (mode === "count" && countValue) {
+  if (mode === CONFIG.SEARCH_MODES.COUNT && countValue) {
     try {
-      // Wait for all mod filters to be added first
       await wait(1000);
 
-      // Find the search advanced pane
       const advancedPane = document.querySelector(
         ".search-advanced-pane.brown"
       );
@@ -272,29 +250,48 @@ async function setStatFilterMode(mode, countValue = null) {
         return false;
       }
 
-      // Look for the edit button
-      const editButton = advancedPane.querySelector(".btn.edit-btn");
+      let editButton = null;
+      for (const selector of CONFIG.SELECTORS.STAT_FILTER_EDIT_BUTTON) {
+        editButton = advancedPane.querySelector(selector);
+        if (editButton) break;
+      }
+
       if (!editButton) {
         console.warn("Edit button not found - COUNT mode may not be available");
         return false;
       }
 
-      // Click the edit button to reveal mode options
       editButton.focus();
       editButton.click();
-      await wait(800);
+      await wait(1200);
 
-      // Look for the specific multiselect dropdown that appears
-      const multiselectDropdown = document.querySelector(
-        ".multiselect.filter-select.filter-select-title.filter-select-mutate.multiselect--active"
-      );
+      let multiselectDropdown = null;
+
+      for (const selector of CONFIG.SELECTORS.STAT_FILTER_MODE_DROPDOWN) {
+        multiselectDropdown = document.querySelector(selector);
+        if (multiselectDropdown) break;
+      }
 
       if (!multiselectDropdown) {
-        console.warn("Multiselect dropdown not found after clicking edit");
+        multiselectDropdown = document.querySelector(".multiselect--active");
+      }
+
+      if (!multiselectDropdown) {
+        const allMultiselects = document.querySelectorAll(".multiselect");
+        for (const ms of allMultiselects) {
+          const options = ms.querySelectorAll(".multiselect__option");
+          if (options.length > 0) {
+            multiselectDropdown = ms;
+            break;
+          }
+        }
+      }
+
+      if (!multiselectDropdown) {
+        console.error("Multiselect dropdown not found after clicking edit");
         return false;
       }
 
-      // Look for the options within the multiselect dropdown
       const dropdownOptions = multiselectDropdown.querySelectorAll(
         ".multiselect__option:not(.multiselect__option--disabled)"
       );
@@ -304,52 +301,45 @@ async function setStatFilterMode(mode, countValue = null) {
         return false;
       }
 
-      // Find the COUNT option
       const countOption = Array.from(dropdownOptions).find((option) => {
         const text = option.textContent.trim().toLowerCase();
         return (
           text.includes("count") ||
           text.includes("minimum") ||
-          text.includes("at least")
+          text.includes("at least") ||
+          text.includes("min") ||
+          text.match(/\d+.*of.*\d+/)
         );
       });
 
       if (!countOption) {
-        console.warn(
-          "COUNT option not found in dropdown. Available options:",
-          Array.from(dropdownOptions).map((o) => `"${o.textContent.trim()}"`)
-        );
+        console.warn("COUNT option not found in dropdown");
         return false;
       }
 
-      // Click the COUNT option
       countOption.scrollIntoView({ block: "nearest" });
       countOption.click();
-      await wait(500);
-
-      // After selecting COUNT, look for the number input that should appear
-      // It might appear in the same area or in a new location
-      const countInputSelectors = [
-        '.search-advanced-pane.brown input[type="number"]',
-        '.filter-select input[type="number"]',
-        'input[type="number"]',
-        'input[placeholder*="count"]',
-        'input[placeholder*="minimum"]',
-      ];
+      await wait(800);
 
       let countInput = null;
-      for (const selector of countInputSelectors) {
+      for (const selector of CONFIG.SELECTORS.COUNT_VALUE_INPUT) {
         countInput = document.querySelector(selector);
         if (countInput) break;
       }
 
+      if (!countInput) {
+        const allNumberInputs = document.querySelectorAll(
+          'input[type="number"]'
+        );
+        if (allNumberInputs.length > 0) {
+          countInput = allNumberInputs[allNumberInputs.length - 1];
+        }
+      }
+
       if (countInput) {
-        // Focus and set the count value
         countInput.focus();
         setInputValueInstantly(countInput, countValue.toString());
         await wait(200);
-
-        // Trigger events to ensure the value is registered
         countInput.dispatchEvent(new Event("blur", { bubbles: true }));
       } else {
         console.warn(
@@ -364,10 +354,15 @@ async function setStatFilterMode(mode, countValue = null) {
     }
   }
 
+  if (Object.values(CONFIG.SEARCH_MODES).includes(mode)) {
+    console.warn(`Search mode "${mode}" is not yet implemented`);
+    return false;
+  }
+
+  console.error(`Unknown search mode: ${mode}`);
   return false;
 }
 
-// Add a single mod filter with tier range selection
 async function addSingleModFilterInstantly(mod, filterIndex) {
   try {
     const statFilterInput = await findStatFilterInput();
@@ -396,7 +391,6 @@ async function addSingleModFilterInstantly(mod, filterIndex) {
   }
 }
 
-// Find the stat filter input field in the advanced search section
 async function findStatFilterInput() {
   let statInput = document.querySelector(
     '.search-advanced-pane.brown input[placeholder*="Add Stat Filter"]'
@@ -426,7 +420,6 @@ async function findStatFilterInput() {
   return null;
 }
 
-// Set stat filter input with proper dropdown triggering
 async function setStatFilterInputInstantly(input, tradeSiteStat) {
   input.value = "";
   input.focus();
@@ -440,7 +433,6 @@ async function setStatFilterInputInstantly(input, tradeSiteStat) {
     return;
   }
 
-  // Force dropdown to appear and filter results
   input.focus();
   input.click();
 
@@ -453,14 +445,12 @@ async function setStatFilterInputInstantly(input, tradeSiteStat) {
   await wait(800);
 }
 
-// Select stat from filtered dropdown with advanced text matching
 function selectFromStatFilterDropdown(targetText) {
   const statFilterOptions = document.querySelectorAll(
     CONFIG.SELECTORS.STAT_FILTER_OPTIONS
   );
   if (statFilterOptions.length === 0) return false;
 
-  // Create multiple search variations to handle different text formats
   const searchVariations = [
     targetText,
     targetText.replace(/explicit /i, ""),
@@ -482,7 +472,6 @@ function selectFromStatFilterDropdown(targetText) {
   const normalizeText = (text) =>
     text.toLowerCase().replace(/\s+/g, " ").trim();
 
-  // Try exact matches with all variations
   for (const variation of searchVariations) {
     const normalizedVariation = normalizeText(variation);
 
@@ -498,7 +487,6 @@ function selectFromStatFilterDropdown(targetText) {
     }
   }
 
-  // Fallback to keyword matching
   const keywords = [];
   if (targetText.toLowerCase().includes("chaos")) keywords.push("chaos");
   if (targetText.toLowerCase().includes("poison")) keywords.push("poison");
@@ -523,7 +511,6 @@ function selectFromStatFilterDropdown(targetText) {
   return false;
 }
 
-// ENHANCED: Main auto-fill handler with COUNT mode support
 async function handleAutoFill(config) {
   await wait(500);
 
@@ -541,9 +528,14 @@ async function handleAutoFill(config) {
     if (config.searchMode === "with-mods" && config.selectedMods?.length > 0) {
       await addModFiltersInstantly(config.selectedMods);
 
-      // NEW: Set stat filter mode if COUNT mode is selected
-      if (config.statFilterMode === "count" && config.countValue) {
-        const modeSet = await setStatFilterMode("count", config.countValue);
+      if (
+        config.statFilterMode === CONFIG.SEARCH_MODES.COUNT &&
+        config.countValue
+      ) {
+        const modeSet = await setStatFilterMode(
+          CONFIG.SEARCH_MODES.COUNT,
+          config.countValue
+        );
         if (!modeSet) {
           console.warn("Failed to set COUNT mode - continuing with AND mode");
         }
@@ -551,7 +543,7 @@ async function handleAutoFill(config) {
     }
 
     const modeText =
-      config.statFilterMode === "count"
+      config.statFilterMode === CONFIG.SEARCH_MODES.COUNT
         ? `COUNT (at least ${config.countValue})`
         : "AND";
 
@@ -565,7 +557,6 @@ async function handleAutoFill(config) {
   }
 }
 
-// Add multiple mod filters sequentially
 async function addModFiltersInstantly(selectedMods) {
   for (let i = 0; i < selectedMods.length; i++) {
     const mod = selectedMods[i];
@@ -579,7 +570,6 @@ async function addModFiltersInstantly(selectedMods) {
   }
 }
 
-// Verify that stat filter was successfully created
 async function verifyStatFilterCreated(expectedStat) {
   await wait(300);
 
@@ -607,7 +597,6 @@ async function verifyStatFilterCreated(expectedStat) {
   return minInput && maxInput;
 }
 
-// Set min/max values for the most recently created mod filter
 async function setModValuesInstantly(mod) {
   let minValue = mod.minValue;
   let maxValue = mod.maxValue;
@@ -637,7 +626,6 @@ async function setModValuesInstantly(mod) {
   }
 }
 
-// Find elements with fallback selectors and timeout
 async function findElementWithFallback(selectors, timeout = 5000) {
   const selectorArray = Array.isArray(selectors) ? selectors : [selectors];
 
@@ -666,7 +654,6 @@ async function findElementWithFallback(selectors, timeout = 5000) {
   });
 }
 
-// Wait for page to be ready for interaction
 async function waitForPageReady() {
   try {
     await waitForElement(["body", ".content"], 10000);
@@ -683,7 +670,6 @@ async function waitForPageReady() {
   }
 }
 
-// Wait for trade page elements to stabilize
 async function waitForTradePageStability() {
   return new Promise((resolve) => {
     let attempts = 0;
@@ -716,7 +702,6 @@ async function waitForTradePageStability() {
   });
 }
 
-// Clear any existing search filters
 async function clearExistingSearch() {
   const clearButton = await findElementWithFallback(
     ['button[title*="Clear"]', ".clear-all-button"],
@@ -728,14 +713,12 @@ async function clearExistingSearch() {
   }
 }
 
-// Wait for specific element to appear
 async function waitForElement(selectors, timeout = 5000) {
   const element = await findElementWithFallback(selectors, timeout);
   if (!element) throw new Error(`Element not found: ${selectors.join(", ")}`);
   return element;
 }
 
-// Initialize content script and message listener
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeContentScript);
 } else {

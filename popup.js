@@ -1,37 +1,11 @@
-// PoE Trade Helper - Complete Popup Script with COUNT Mode Support
-// Global state management
+// PoE Trade Helper - Popup Script with COUNT Mode Support
 let currentJewelType = "";
 let selectedMods = [];
 let allAbyssModsData = null;
 let currentModForTierSelection = null;
-let currentSearchMode = "and"; // New: track search mode
+let currentSearchMode = CONFIG.SEARCH_MODES.AND;
 let elements = {};
 
-// Configuration for different jewel types and their mod domains
-const JEWEL_TYPE_CONFIG = {
-  murderous: {
-    displayName: "Murderous Eye Jewel",
-    domain: "abyss_jewel",
-    tags: ["abyss_jewel_melee"],
-  },
-  searching: {
-    displayName: "Searching Eye Jewel",
-    domain: "abyss_jewel",
-    tags: ["abyss_jewel_ranged"],
-  },
-  hypnotic: {
-    displayName: "Hypnotic Eye Jewel",
-    domain: "abyss_jewel",
-    tags: ["abyss_jewel_caster"],
-  },
-  ghastly: {
-    displayName: "Ghastly Eye Jewel",
-    domain: "abyss_jewel",
-    tags: ["abyss_jewel_summoner"],
-  },
-};
-
-// Initialize popup when DOM is ready
 document.addEventListener("DOMContentLoaded", async function () {
   try {
     await loadDataFiles();
@@ -46,14 +20,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 });
 
-// Load mod data from GitHub repository
 async function loadDataFiles() {
-  const GITHUB_BASE_URL = CONFIG.GITHUB_URLS.BASE_URL;
-  const targetFile = "all_abyss_jewel_mods.json";
-  const fullURL = `${GITHUB_BASE_URL}${targetFile}`;
-
   try {
-    const response = await fetch(fullURL);
+    const response = await fetch(CONFIG.GITHUB_URLS.ALL_ABYSS_MODS);
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
     }
@@ -73,67 +42,65 @@ async function loadDataFiles() {
   }
 }
 
-// Initialize search mode selector
 function initializeSearchModeSelector() {
   const modeOptions = document.querySelectorAll(".mode-option");
   const countContainer = document.getElementById("countInputContainer");
   const countValue = document.getElementById("countValue");
 
+  if (countValue) {
+    countValue.value = CONFIG.COUNT_SETTINGS.DEFAULT_VALUE;
+    countValue.setAttribute("min", CONFIG.COUNT_SETTINGS.MIN_VALUE);
+    countValue.setAttribute("max", CONFIG.COUNT_SETTINGS.MAX_VALUE);
+  }
+
   modeOptions.forEach((option) => {
     option.addEventListener("click", function () {
       const mode = this.getAttribute("data-mode");
 
-      // Update visual selection
+      if (!Object.values(CONFIG.SEARCH_MODES).includes(mode)) {
+        console.warn(`Unknown search mode: ${mode}`);
+        return;
+      }
+
       modeOptions.forEach((opt) => opt.classList.remove("active"));
       this.classList.add("active");
 
-      // Update state
       currentSearchMode = mode;
 
-      // Show/hide count input
-      if (mode === "count") {
+      if (mode === CONFIG.SEARCH_MODES.COUNT) {
         countContainer.classList.add("visible");
         updateCountInputMax();
       } else {
         countContainer.classList.remove("visible");
       }
 
-      // Update button text
       updateAutoFillButton();
     });
   });
 
-  // Handle count value changes
   if (countValue) {
     countValue.addEventListener("input", updateAutoFillButton);
     countValue.addEventListener("change", validateCountValue);
   }
 }
 
-// Update maximum count value based on selected mods
 function updateCountInputMax() {
   const countValue = document.getElementById("countValue");
   if (!countValue) return;
 
-  const maxCount = Math.max(1, selectedMods.length);
-  countValue.setAttribute("max", maxCount);
-
-  // Adjust current value if it exceeds the new maximum
-  if (parseInt(countValue.value) > maxCount) {
-    countValue.value = Math.max(1, Math.min(maxCount, 3));
-  }
+  countValue.setAttribute("max", CONFIG.COUNT_SETTINGS.MAX_VALUE.toString());
+  countValue.setAttribute("min", CONFIG.COUNT_SETTINGS.MIN_VALUE.toString());
 }
 
-// Validate count input value
 function validateCountValue() {
   const countValue = document.getElementById("countValue");
   if (!countValue) return;
 
   const value = parseInt(countValue.value);
-  const maxValue = parseInt(countValue.getAttribute("max"));
-  const minValue = parseInt(countValue.getAttribute("min"));
+  const maxValue = CONFIG.COUNT_SETTINGS.MAX_VALUE;
+  const minValue = CONFIG.COUNT_SETTINGS.MIN_VALUE;
 
-  if (value < minValue) {
+  if (isNaN(value) || value < minValue) {
     countValue.value = minValue;
   } else if (value > maxValue) {
     countValue.value = maxValue;
@@ -142,16 +109,31 @@ function validateCountValue() {
   updateAutoFillButton();
 }
 
-// Process and group mods by jewel type with tier aggregation
+function getEffectiveCountValue() {
+  const countValue = document.getElementById("countValue");
+  const inputValue = countValue
+    ? parseInt(countValue.value)
+    : CONFIG.COUNT_SETTINGS.DEFAULT_VALUE;
+  const selectedModCount = selectedMods.length;
+
+  if (inputValue > selectedModCount && selectedModCount > 0) {
+    return selectedModCount;
+  }
+
+  return Math.max(
+    CONFIG.COUNT_SETTINGS.MIN_VALUE,
+    Math.min(CONFIG.COUNT_SETTINGS.MAX_VALUE, inputValue)
+  );
+}
+
 function getModsForJewelType(jewelType) {
   if (!jewelType || !allAbyssModsData) return {};
 
-  const jewelConfig = JEWEL_TYPE_CONFIG[jewelType];
+  const jewelConfig = CONFIG.JEWEL_TYPE_CONFIG[jewelType];
   if (!jewelConfig) return {};
 
   const modGroups = {};
 
-  // Group mods by their base type
   Object.entries(allAbyssModsData).forEach(([modId, modData]) => {
     if (!modData.spawn_weights) return;
 
@@ -182,20 +164,17 @@ function getModsForJewelType(jewelType) {
     }
   });
 
-  // Create tier-aggregated mods from grouped variants
   const relevantMods = {};
 
   Object.entries(modGroups).forEach(([baseModType, modVariants]) => {
     if (modVariants.length === 0) return;
 
-    // Sort by required level (highest first = T1)
     const sortedVariants = modVariants.sort((a, b) => {
       const levelDiff = (b.requiredLevel || 0) - (a.requiredLevel || 0);
       if (levelDiff !== 0) return levelDiff;
       return a.modId.localeCompare(b.modId);
     });
 
-    // Create tier structure
     const tiers = {};
     sortedVariants.forEach((variant, index) => {
       const tierKey = `T${index + 1}`;
@@ -208,10 +187,8 @@ function getModsForJewelType(jewelType) {
       };
     });
 
-    // Choose the most representative variant for display
     let primaryVariant = sortedVariants[0];
 
-    // Special handling for life regeneration mods
     if (baseModType === "PlayerLifeRegeneration") {
       const playerRegenVariant = sortedVariants.find(
         (variant) =>
@@ -245,7 +222,6 @@ function getModsForJewelType(jewelType) {
   return relevantMods;
 }
 
-// Extract base mod type from mod text using pattern matching
 function extractBaseModType(modId, modText) {
   if (!modText) {
     return modId || "UnknownMod";
@@ -253,7 +229,6 @@ function extractBaseModType(modId, modText) {
 
   const textLower = modText.toLowerCase();
 
-  // Minion patterns (must come first to avoid collisions)
   if (textLower.includes("minion")) {
     if (textLower.includes("maximum life")) return "MinionMaximumLife";
     if (
@@ -264,7 +239,6 @@ function extractBaseModType(modId, modText) {
     }
     if (textLower.includes("leech") && textLower.includes("life"))
       return "MinionLifeLeech";
-
     if (
       textLower.includes("attack speed") &&
       textLower.includes("cast speed")
@@ -297,12 +271,10 @@ function extractBaseModType(modId, modText) {
     return "MinionMod";
   }
 
-  // Player stat patterns
   if (textLower.includes("maximum life")) return "MaximumLife";
   if (textLower.includes("maximum mana")) return "MaximumMana";
   if (textLower.includes("maximum energy shield")) return "MaximumEnergyShield";
 
-  // Life regeneration patterns with conditional handling
   if (
     textLower.includes("life per second") ||
     textLower.includes("life regeneration")
@@ -336,7 +308,6 @@ function extractBaseModType(modId, modText) {
     return "PlayerManaRegeneration";
   }
 
-  // Resistance patterns
   const resistanceTypes = ["fire", "cold", "lightning", "chaos"];
   for (const type of resistanceTypes) {
     if (textLower.includes(`${type} resistance`)) {
@@ -344,7 +315,6 @@ function extractBaseModType(modId, modText) {
     }
   }
 
-  // Weapon damage patterns
   if (textLower.includes("with ") && textLower.includes("attacks")) {
     const weaponMatch = textLower.match(
       /with\s+(\w+(?:\s+or\s+\w+)?)\s+attacks/i
@@ -362,7 +332,6 @@ function extractBaseModType(modId, modText) {
     }
   }
 
-  // Speed and cast patterns
   if (textLower.includes("cast speed")) {
     if (textLower.includes("recently") || textLower.includes("if")) {
       return "ConditionalCastSpeed";
@@ -372,18 +341,13 @@ function extractBaseModType(modId, modText) {
 
   if (textLower.includes("attack speed")) return "AttackSpeed";
   if (textLower.includes("movement speed")) return "MovementSpeed";
-
-  if (textLower.includes("spell") && textLower.includes("damage")) {
+  if (textLower.includes("spell") && textLower.includes("damage"))
     return "SpellDamage";
-  }
-
-  // Critical strike patterns
   if (textLower.includes("critical strike chance"))
     return "CriticalStrikeChance";
   if (textLower.includes("critical strike multiplier"))
     return "CriticalStrikeMultiplier";
 
-  // Ailment effect patterns
   if (textLower.includes("effect of") && textLower.includes("ailments")) {
     if (textLower.includes("cold")) return "ColdAilmentEffect";
     if (textLower.includes("fire")) return "FireAilmentEffect";
@@ -391,7 +355,6 @@ function extractBaseModType(modId, modText) {
     return "AilmentEffect";
   }
 
-  // Fallback pattern extraction
   const fallbackType = modText
     .replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "")
     .replace(/\b\d+(?:\.\d+)?\b/g, "")
@@ -403,32 +366,25 @@ function extractBaseModType(modId, modText) {
   return fallbackType || modId || "UnknownMod";
 }
 
-// Create user-friendly mod names by normalizing value placeholders
 function createFriendlyModName(text, modData) {
   if (!text) return "Unknown Mod";
 
   let friendly = text;
 
-  // Handle damage ranges like "(14-15) to (25-28)" -> "# to # Added Physical Damage"
   friendly = friendly.replace(
     /\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\) to \(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g,
     "# to #"
   );
-  // Handle single ranges like "(17-20)" -> "#"
   friendly = friendly.replace(/\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, "#");
-  // Handle standalone numbers
   friendly = friendly.replace(/\b\d+(?:\.\d+)?\b/g, "#");
-  // Clean up multiple # symbols that are adjacent
   friendly = friendly.replace(/#\s*to\s*#\s*to\s*#/g, "# to #");
   friendly = friendly.replace(/#+/g, "#");
-  // Normalize + signs and spacing
   friendly = friendly.replace(/\+#/g, "+#");
   friendly = friendly.replace(/\s+/g, " ");
 
   return friendly.trim();
 }
 
-// Create tier information from mod data
 function createTierInfo(modData) {
   let min = undefined,
     max = undefined;
@@ -439,7 +395,6 @@ function createTierInfo(modData) {
     max = values.max;
   }
 
-  // Fallback to stats if text parsing failed
   if ((min === undefined || max === undefined) && modData.stats?.length > 0) {
     const stat = modData.stats[0];
     min = stat.min;
@@ -454,13 +409,11 @@ function createTierInfo(modData) {
   };
 }
 
-// Extract numeric values from mod text using regex patterns
 function extractValuesFromText(text) {
   if (!text || typeof text !== "string") {
     return { min: undefined, max: undefined };
   }
 
-  // Handle damage ranges like "(14-15) to (25-28)"
   const fullDamageRangeMatch = text.match(
     /\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\) to \((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)/
   );
@@ -471,7 +424,6 @@ function extractValuesFromText(text) {
     };
   }
 
-  // Simple parenthetical ranges like (17-20)
   const rangeMatch = text.match(/\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)/);
   if (rangeMatch) {
     return {
@@ -480,7 +432,6 @@ function extractValuesFromText(text) {
     };
   }
 
-  // Single values
   const singleMatch = text.match(/[+\-]?(\d+(?:\.\d+)?)/);
   if (singleMatch) {
     const value = parseFloat(singleMatch[1]);
@@ -490,15 +441,19 @@ function extractValuesFromText(text) {
   return { min: undefined, max: undefined };
 }
 
-// Search for mods matching query with fuzzy matching and abbreviation support
 function findMatchingMods(query, maxResults = 10) {
   if (!currentJewelType || !allAbyssModsData) return [];
 
   const availableMods = getModsForJewelType(currentJewelType);
   const queryLower = query.toLowerCase().trim();
+
+  // If empty search, return empty results
+  if (queryLower === "") {
+    return [];
+  }
+
   const results = [];
 
-  // Common abbreviations mapping
   const abbreviations = {
     mana: "maximum mana",
     es: "energy shield",
@@ -517,7 +472,6 @@ function findMatchingMods(query, maxResults = 10) {
 
   const searchQuery = (abbreviations[queryLower] || queryLower).toLowerCase();
 
-  // Search through all available mods with confidence scoring
   Object.entries(availableMods).forEach(([modId, mod]) => {
     const modTextLower = (mod.text || "").toLowerCase();
     const modNameLower = (mod.name || "").toLowerCase();
@@ -526,7 +480,6 @@ function findMatchingMods(query, maxResults = 10) {
     let confidence = 0;
     let matchType = "";
 
-    // Multiple search strategies with different confidence levels
     if (
       modTextLower === searchQuery ||
       modNameLower === searchQuery ||
@@ -590,7 +543,6 @@ function findMatchingMods(query, maxResults = 10) {
     .slice(0, maxResults);
 }
 
-// Helper functions for advanced text matching
 function hasWordBoundaryMatch(text, query) {
   const words = text.split(/\s+/);
   return words.some((word) => word.includes(query));
@@ -615,7 +567,6 @@ function hasTokenMatch(text, query) {
   );
 }
 
-// Initialize DOM element references
 function initializeElements() {
   const elementIds = [
     "jewelType",
@@ -640,7 +591,6 @@ function initializeElements() {
   });
 }
 
-// Attach event listeners to UI elements
 function attachEventListeners() {
   if (elements.jewelType)
     elements.jewelType.addEventListener("change", handleJewelTypeChange);
@@ -669,13 +619,12 @@ function attachEventListeners() {
   }
 }
 
-// Populate jewel type dropdown with available options
 function populateJewelDropdown() {
   if (!elements.jewelType) return;
 
   elements.jewelType.innerHTML =
     '<option value="">Select Abyss Jewel Type</option>';
-  Object.entries(JEWEL_TYPE_CONFIG).forEach(([key, config]) => {
+  Object.entries(CONFIG.JEWEL_TYPE_CONFIG).forEach(([key, config]) => {
     const option = document.createElement("option");
     option.value = key;
     option.textContent = config.displayName;
@@ -683,7 +632,6 @@ function populateJewelDropdown() {
   });
 }
 
-// Handle jewel type selection change
 function handleJewelTypeChange(event) {
   currentJewelType = event.target.value;
   selectedMods = [];
@@ -703,13 +651,12 @@ function handleJewelTypeChange(event) {
 
   if (currentJewelType) {
     showStatusMessage(
-      `Selected ${JEWEL_TYPE_CONFIG[currentJewelType].displayName}`,
+      `Selected ${CONFIG.JEWEL_TYPE_CONFIG[currentJewelType].displayName}`,
       "success"
     );
   }
 }
 
-// Handle mod search input with real-time filtering
 function handleModSearchInput(event) {
   const query = event.target.value.trim();
   if (query.length < 2) {
@@ -723,11 +670,9 @@ function handleModSearchInput(event) {
     return;
   }
 
-  const matchingMods = findMatchingMods(query);
   displaySearchResults(matchingMods);
 }
 
-// Handle keyboard navigation in search
 function handleModSearchKeydown(event) {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -736,7 +681,6 @@ function handleModSearchKeydown(event) {
   }
 }
 
-// Display search results in the UI
 function displaySearchResults(results) {
   if (!elements.searchResults) return;
 
@@ -752,10 +696,8 @@ function displaySearchResults(results) {
     const resultDiv = document.createElement("div");
     resultDiv.className = "search-result";
 
-    const displayText = result.name;
-
     resultDiv.innerHTML = `
-      <span class="mod-name">${displayText}</span>
+      <span class="mod-name">${result.name}</span>
       <span class="confidence">(${result.confidence}%)</span>
     `;
 
@@ -764,13 +706,11 @@ function displaySearchResults(results) {
   });
 }
 
-// Handle mod selection and show tier modal
 function selectMod(mod) {
   currentModForTierSelection = mod;
   showTierModal(mod);
 }
 
-// Show tier selection modal for the selected mod
 function showTierModal(mod) {
   if (!elements.tierModal || !elements.tierFromSelect || !elements.tierToSelect)
     return;
@@ -806,7 +746,6 @@ function showTierModal(mod) {
   elements.tierModal.style.display = "flex";
 }
 
-// Update tier range information display based on current selections
 function updateTierRangeInfo() {
   if (
     !elements.tierRangeInfo ||
@@ -877,7 +816,6 @@ function updateTierRangeInfo() {
   elements.tierRangeInfo.innerHTML = infoText;
 }
 
-// Confirm tier selection and add mod to selected list
 function confirmTierSelection() {
   if (!currentModForTierSelection) return;
 
@@ -888,7 +826,6 @@ function confirmTierSelection() {
   closeTierModal();
 }
 
-// Check if mod is a flat added damage type (requires special averaging)
 function isFlatAddedDamageMod(modText) {
   if (!modText) return false;
   const textLower = modText.toLowerCase();
@@ -913,7 +850,6 @@ function isFlatAddedDamageMod(modText) {
   return hasDamagePattern && hasDamageType && !isPercentage;
 }
 
-// Add selected mod with tier range to the mod list
 function addSelectedModWithRange(mod, fromTier, toTier) {
   const baseModType =
     mod.baseModType || mod.modId || extractBaseModType(mod.modId, mod.text);
@@ -952,7 +888,6 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
     finalMaxValue,
     wasAveraged = false;
 
-  // Calculate search values based on tier selection
   if (isLowestTierSearch) {
     finalMinValue = 0;
     finalMaxValue = Math.max(fromTierData.max, toTierData.max);
@@ -1025,7 +960,6 @@ function addSelectedModWithRange(mod, fromTier, toTier) {
   );
 }
 
-// Calculate damage range for flat damage mods using averaging
 function calculateDamageRange(tierData) {
   const text = tierData.text;
   const damageRangeMatch = text.match(
@@ -1038,7 +972,6 @@ function calculateDamageRange(tierData) {
     const highMin = parseFloat(damageRangeMatch[3]);
     const highMax = parseFloat(damageRangeMatch[4]);
 
-    // Calculate the actual damage range by averaging
     const actualMin = (lowMin + highMin) / 2;
     const actualMax = (lowMax + highMax) / 2;
 
@@ -1048,13 +981,11 @@ function calculateDamageRange(tierData) {
   return { min: tierData.min, max: tierData.max };
 }
 
-// Close tier selection modal
 function closeTierModal() {
   if (elements.tierModal) elements.tierModal.style.display = "none";
   currentModForTierSelection = null;
 }
 
-// Update the display of selected mods
 function updateSelectedModsDisplay() {
   if (!elements.selectedMods) return;
 
@@ -1086,7 +1017,6 @@ function updateSelectedModsDisplay() {
   });
 }
 
-// Remove a selected mod from the list
 function removeSelectedMod(index) {
   if (index >= 0 && index < selectedMods.length) {
     const removedMod = selectedMods.splice(index, 1)[0];
@@ -1097,7 +1027,6 @@ function removeSelectedMod(index) {
   }
 }
 
-// Clear search input and results
 function clearSearchInput() {
   if (elements.modSearch) elements.modSearch.value = "";
   clearSearchResults();
@@ -1107,35 +1036,37 @@ function clearSearchResults() {
   if (elements.searchResults) elements.searchResults.innerHTML = "";
 }
 
-// Update auto-fill button text based on current state and search mode
 function updateAutoFillButton() {
   if (!elements.autoFillBtn) return;
 
   const hasJewelType = !!currentJewelType;
   const hasMods = selectedMods.length > 0;
-  const countValue = elements.countValue
-    ? parseInt(elements.countValue.value)
-    : 3;
 
   elements.autoFillBtn.disabled = !hasJewelType;
 
   if (hasMods) {
-    if (currentSearchMode === "count") {
-      const validCount = Math.min(countValue, selectedMods.length);
-      elements.autoFillBtn.textContent = `Search: At least ${validCount} of ${selectedMods.length} mods`;
-    } else {
+    if (currentSearchMode === CONFIG.SEARCH_MODES.COUNT) {
+      const effectiveCount = getEffectiveCountValue();
+      elements.autoFillBtn.textContent = `Search: At least ${effectiveCount} of ${selectedMods.length} mods`;
+    } else if (currentSearchMode === CONFIG.SEARCH_MODES.AND) {
       elements.autoFillBtn.textContent = `Search with ${
         selectedMods.length
       } mod${selectedMods.length !== 1 ? "s" : ""} (AND)`;
+    } else {
+      const modeLabel =
+        CONFIG.SEARCH_MODE_LABELS[currentSearchMode] ||
+        currentSearchMode.toUpperCase();
+      elements.autoFillBtn.textContent = `Search with ${
+        selectedMods.length
+      } mod${selectedMods.length !== 1 ? "s" : ""} (${modeLabel})`;
     }
   } else if (hasJewelType) {
-    elements.autoFillBtn.textContent = `Search ${JEWEL_TYPE_CONFIG[currentJewelType].displayName}`;
+    elements.autoFillBtn.textContent = `Search ${CONFIG.JEWEL_TYPE_CONFIG[currentJewelType].displayName}`;
   } else {
     elements.autoFillBtn.textContent = "Select Jewel Type";
   }
 }
 
-// Handle auto-fill button click with COUNT mode support
 async function handleAutoFill() {
   if (!currentJewelType) {
     showStatusMessage("Please select a jewel type", "error");
@@ -1154,27 +1085,27 @@ async function handleAutoFill() {
     };
   });
 
-  // Add search mode configuration
+  const effectiveCountValue =
+    currentSearchMode === CONFIG.SEARCH_MODES.COUNT
+      ? getEffectiveCountValue()
+      : undefined;
+
   const config = {
     jewelType: currentJewelType,
-    jewelDisplayName: JEWEL_TYPE_CONFIG[currentJewelType].displayName,
+    jewelDisplayName: CONFIG.JEWEL_TYPE_CONFIG[currentJewelType].displayName,
     searchMode: searchMode,
     selectedMods: processedMods,
-    statFilterMode: currentSearchMode, // 'and' or 'count'
-    countValue:
-      currentSearchMode === "count"
-        ? Math.min(
-            parseInt(elements.countValue?.value || 3),
-            selectedMods.length
-          )
-        : undefined,
+    statFilterMode: currentSearchMode,
+    countValue: effectiveCountValue,
     timestamp: Date.now(),
   };
 
-  const modeText =
-    currentSearchMode === "count"
-      ? `COUNT (at least ${config.countValue})`
-      : "AND";
+  let modeText = "AND";
+  if (currentSearchMode === CONFIG.SEARCH_MODES.COUNT) {
+    modeText = `COUNT (at least ${effectiveCountValue})`;
+  } else if (CONFIG.SEARCH_MODE_LABELS[currentSearchMode]) {
+    modeText = CONFIG.SEARCH_MODE_LABELS[currentSearchMode];
+  }
 
   showStatusMessage(`Opening trade site with ${modeText} mode...`, "info");
 
@@ -1195,7 +1126,6 @@ async function handleAutoFill() {
   }
 }
 
-// Convert mod text to generic format for trade site matching
 function genericizeModText(text) {
   if (!text) return "";
 
@@ -1207,7 +1137,6 @@ function genericizeModText(text) {
     .trim();
 }
 
-// Show status message to user
 function showStatusMessage(message, type = "info") {
   if (!elements.statusMessage) return;
 
