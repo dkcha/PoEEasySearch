@@ -1,0 +1,111 @@
+# Internal Development Files
+# These are for development only and not needed by end users
+
+# Miscellaneous files
+abyss_data_processor.js
+abyss_mod_extractor.html
+create_placeholder_icons.py
+github_data_test.json
+all_bases/
+output/
+image_resizer.html
+
+# Test suite and documentation
+poe_test_suite.html
+test_suite_documentation.md
+poe_project_bootstrap.md
+*_bootstrap.md
+DEVELOPMENT.md
+NOTES.md
+TODO.md
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS Generated files
+Thumbs.db
+Desktop.ini
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build and Package files
+*.zip
+*.crx
+*.pem
+build/
+dist/
+package/
+
+# Node modules (if you add any build tools later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Environment and Config
+.env
+.env.local
+.env.*.local
+config.local.js
+secrets.js
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Personal notes and planning
+notes/
+planning/
+drafts/
+personal/
+*.draft.md
+
+# Test and coverage files
+coverage/
+.nyc_output/
+test-results/
+*.test.js.map
+
+# Archive and backup files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Editor backup files
+*~
+\#*\#
+.\#*
+
+# Chrome Extension specific
+# Keep manifest.json, but ignore private key
+*.pem
+key.pem
+
+# Debug and profiling
+*.cpuprofile
+*.heapsnapshot
